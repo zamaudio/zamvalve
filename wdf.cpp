@@ -1,141 +1,80 @@
-#include "wdf.h"
-#include <cmath>
-#include <stdio.h>
+typedef double T;
 
-WDF::WDF() {
+class WDF {
+public:
+	T WD;
+	T WU;
+	T PortRes;
+	WDF();
+	T Voltage(WDF *a);
+	T state;
+	T waveUp();
+};
 
+class Adaptor : public WDF {
+public:
+	WDF *left;
+	WDF *right;
+};
+
+class ser : public Adaptor {
+public:
+	T WD;
+	T WU;
+	ser(Adaptor *left, Adaptor *right);
+	T waveUp(Adaptor *a);
+	void setWD(ser *a, T waveparent);	
+};
+
+class OnePort : public WDF {
+public:
+	T WD;
+	T WU;
+	void setWD(WDF *a, T val);
+};
+
+class R : public OnePort {
+public:
+	R(T res);
+	T waveUp(OnePort *a);
+};
+
+
+
+T Voltage(WDF *a) {
+	T Volts = (a->WU + a->WD) / 2.0;
+	return Volts;
 }
 
-void WDF::setWD(T val) {
-	wD = val;
+ser::ser(Adaptor *l, Adaptor *r) {
+	left = l;
+	right = r;
+	PortRes = l->PortRes + r->PortRes;
 }
 
-void WDF::setRp(T r) {
-	rp = r;
+T ser::waveUp(Adaptor *a) {
+	WU = -waveUp(a->left) - waveUp(a->right);
+	a->WU = WU;
+	return WU;
 }
 
-void WDF::setWU(T val) {
-	wU = val;
+void ser::setWD(ser *a, T waveparent) {
+	a->WD = waveparent;
+	a->left->setWD(a->left, a->left->WU-(a->left->PortRes/a->PortRes)*(waveparent+a->left->WU+a->right->WU));
+	a->right->setWD(a->right, a->right->WU-(a->right->PortRes/a->PortRes)*(waveparent+a->left->WU+a->right->WU));
 }
 
-T WDF::waveUp() {
-	return wU;
+void OnePort::setWD(WDF *a, T val) {
+	a->WD = val;
+	a->state = val;
 }
 
-T WDF::getRp() {
-	return rp;
+R::R(T res) {
+	PortRes = res;
 }
 
-void WDF::dump() {	
-//	printf("wD=%.4f wU=%.4f Rp=%.4f\n",wD,wU,rp);
+T R::waveUp(OnePort *a) {
+	WU = 0.0;
+	a->WU = WU;
 }
 
-template <class Port1, class Port2>Serial::Serial(Port1 a, Port2 b) : Adaptor(&a, &b) {
-	Serial::setRp((&a)->getRp() + (&b)->getRp());
-}
-
-T Serial::waveUp() {
-	WDF::setWU(-(Adaptor::l->waveUp() + Adaptor::r->waveUp()));
-	l->dump();
-	r->dump();
-	return (wU);
-}
-
-void Serial::setWD(T waveparent) {
-	Serial::wD = waveparent;
-	Adaptor::l->setWD((Adaptor::l->wU - (Adaptor::l->getRp()/rp)*(waveparent + Adaptor::l->wU + Adaptor::r->wU)));
-	Adaptor::r->setWD((Adaptor::r->wU - (Adaptor::r->getRp()/rp)*(waveparent + Adaptor::l->wU + Adaptor::r->wU)));
-	
-	dump();
-	Adaptor::l->dump();
-	Adaptor::r->dump();
-}
-
-OnePort::OnePort(T r) : Adaptor(NULL) {
-	setRp(r);
-	dump();
-}
-
-Adaptor::Adaptor(Adaptor *a) {
-	l = NULL;
-	r = NULL;
-}
-
-template <class Port1, class Port2>Adaptor::Adaptor(Port1 *a, Port2 *b) : WDF() {
-	l = a;
-	r = b;
-}
-
-void OnePort::setWD(T val) {
-	wD = val;
-	state = val;
-}
-
-R::R(T r) : OnePort(r) {
-	printf("R\n");
-}
-
-T R::waveUp() {
-	wU = 0.0;
-	return wU;
-}
-
-T R::voltage() {
-	T volts = ((wU + wD) / 2.0);
-	return volts;
-}
-
-C::C(T r) : OnePort(r) {
-	printf("C\n");
-	state = 0.0;
-}
-
-T C::waveUp() {
-	wU = state;
-	return (wU);
-}
-
-V::V(T ee, T r) : OnePort(r) {
-	printf("V\n");
-	e = ee;
-	wD = 0.0;
-}
-
-T V::waveUp() {
-	wU = 2.0*e - wD;
-	return (wU);
-}
-
-
-int main(){ 
-	T Fs = 48000.0;
-	int N = Fs/10.0;
-	T gain = 30.0;
-	T f0 = 100.0;
-	T input[5000] = { 0.0 };
-	T output[5000] = { 0.0 };
-	int i;
-	for (i = 0; i < N; ++i) {
-		input[i] = gain*sin(2.0*M_PI*f0/Fs*i);
-	}
-
-	//Model
-	V V1 = V(0.5,1.0);
-	R R1 = R(80.0);
-	T capval = 0.000035;
-	C C1 = C(1.0/(2.0*capval*Fs));
-	Serial S1 = Serial(V1, Serial(C1,R1));
-	T vdiode = 0.0;
-	T rdiode = 0.0;
-	T r = 0.0;
-	for (int j = 0; j < N; ++j) {
-		V1.e = input[j];
-		S1.waveUp();
-		rdiode = 125.56*exp(-0.036*vdiode);
-		r = (rdiode-S1.rp)/(rdiode+S1.rp);
-		S1.setWD(r*S1.wU);
-		vdiode = (S1.wD+S1.wU)/2.0;
-		output[j] = S1.r->r->voltage();
-		printf("%f %f %f\n", j/Fs, input[j], output[j]);
-	}
-}
