@@ -17,21 +17,22 @@ public:
 
 class OnePort : public WDF {
 public:
-	T WD;
-	T WU;
+	//T WD;
+	//T WU;
 	void setWD(T val);
 };
 
 class Adaptor : public WDF {
 public:
+	T WD;
+	T WU;
 	WDF *left;
 	WDF *right;
+	void setWD(T val);
 };
 
 class ser : public Adaptor {
 public:
-	T WD;
-	T WU;
 	template <class Port1, class Port2>ser(Port1 *left, Port2 *right);
 	T waveUp();
 	void setWD(T waveparent);	
@@ -74,11 +75,16 @@ T ser::waveUp() {
 	return WU;
 }
 
+void Adaptor::setWD(T waveparent) {
+	Adaptor::WD = waveparent;
+}
 
 void ser::setWD(T waveparent) {
-	WD = waveparent;
-	left->setWD(left->WU-(left->PortRes/PortRes)*(waveparent+left->WU+right->WU));
-	right->setWD(right->WU-(right->PortRes/PortRes)*(waveparent+left->WU+right->WU));
+	Adaptor::setWD(waveparent);
+	//left->setWD(left->WU-(left->PortRes/PortRes)*(waveparent+left->WU+right->WU));
+	//right->setWD(right->WU-(right->PortRes/PortRes)*(waveparent+left->WU+right->WU));
+	left->setWD(left->WU-(2.0*left->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
+	right->setWD(right->WU-(2.0*right->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
 }
 
 void WDF::setWD(T val) {
@@ -119,7 +125,7 @@ T V::waveUp() {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs/100.0;
+	int N = Fs/10.0;
 	T gain = 30.0;
 	T f0 = 100.0;
 	T input[5000] = { 0.0 };
@@ -147,7 +153,7 @@ int main(){
 		r = (rdiode-S1.PortRes)/(rdiode+S1.PortRes);
 		S1.setWD(r*S1.WU);
 		vdiode = (S1.WD+S1.WU)/2.0;
-		output[j] = R1.Voltage();
+		output[j] = -S1.right->Voltage();
 		printf("%f %f %f\n", j/Fs, input[j], output[j]);
 	}
 }
