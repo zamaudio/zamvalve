@@ -19,19 +19,20 @@ public:
 
 class Adaptor : public WDF {
 public:
-	WDF *l;
-	WDF *r;
-	Adaptor(WDF *a, WDF *b);
+	Adaptor *l;
+	Adaptor *r;
+	Adaptor(Adaptor *a);
+	template <class Port1, class Port2>Adaptor(Port1 *a, Port2 *b);
 };
 
 class Serial : public Adaptor {
 public:
-	Serial(WDF a, WDF b);
+	template <class Port1, class Port2>Serial(Port1 a, Port2 b);
 	T waveUp();
 	void setWD(T waveparent);
 };
 
-class OnePort : public WDF {
+class OnePort : public Adaptor {
 public:
 	OnePort(T r);
 	T state;
