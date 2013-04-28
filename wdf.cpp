@@ -6,9 +6,17 @@ public:
 	T WU;
 	T PortRes;
 	WDF();
-	T Voltage(WDF *a);
+	T Voltage();
 	T state;
-	T waveUp();
+	T waveUp() {}
+	void setWD(T waveparent);
+};
+
+class OnePort : public WDF {
+public:
+	T WD;
+	T WU;
+	void setWD(T val);
 };
 
 class Adaptor : public WDF {
@@ -22,27 +30,21 @@ public:
 	T WD;
 	T WU;
 	ser(Adaptor *left, Adaptor *right);
-	T waveUp(Adaptor *a);
-	void setWD(ser *a, T waveparent);	
-};
-
-class OnePort : public WDF {
-public:
-	T WD;
-	T WU;
-	void setWD(WDF *a, T val);
+	T waveUp();
+	void setWD(T waveparent);	
 };
 
 class R : public OnePort {
 public:
 	R(T res);
-	T waveUp(OnePort *a);
+	T waveUp();
 };
 
 
+WDF::WDF() {}
 
-T Voltage(WDF *a) {
-	T Volts = (a->WU + a->WD) / 2.0;
+T WDF::Voltage() {
+	T Volts = (WU + WD) / 2.0;
 	return Volts;
 }
 
@@ -52,29 +54,33 @@ ser::ser(Adaptor *l, Adaptor *r) {
 	PortRes = l->PortRes + r->PortRes;
 }
 
-T ser::waveUp(Adaptor *a) {
-	WU = -waveUp(a->left) - waveUp(a->right);
-	a->WU = WU;
+T ser::waveUp() {
+	WU = -left->waveUp() - right->waveUp();
 	return WU;
 }
 
-void ser::setWD(ser *a, T waveparent) {
-	a->WD = waveparent;
-	a->left->setWD(a->left, a->left->WU-(a->left->PortRes/a->PortRes)*(waveparent+a->left->WU+a->right->WU));
-	a->right->setWD(a->right, a->right->WU-(a->right->PortRes/a->PortRes)*(waveparent+a->left->WU+a->right->WU));
+
+void ser::setWD(T waveparent) {
+	WD = waveparent;
+	left->setWD(left->WU-(left->PortRes/PortRes)*(waveparent+left->WU+right->WU));
+	right->setWD(right->WU-(right->PortRes/PortRes)*(waveparent+left->WU+right->WU));
 }
 
-void OnePort::setWD(WDF *a, T val) {
-	a->WD = val;
-	a->state = val;
+void WDF::setWD(T val) {
+	WD = val;
+	state = val;
 }
 
 R::R(T res) {
 	PortRes = res;
 }
 
-T R::waveUp(OnePort *a) {
+T R::waveUp() {
 	WU = 0.0;
-	a->WU = WU;
+	WU = WU;
 }
+
+
+
+
 
