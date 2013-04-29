@@ -51,55 +51,55 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	if (v.ag == vg) vg = v.ag - 0.0001;
+	//if (v.ag == vg) vg = v.ag - 0.0001;
 	return (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*((v.ak-v.vk)/(v.ag-vg)+1.0))),1.0/v.K));
 }
 
-T ff0(Valve v, T vkn) {
-	return ((v.r0k*(v.ap+mu(v,vkn)*(v.vg+h(v,vkn)-alpha(v,vkn))+v.r0p*v.ak)/(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-(v.r0k*v.r0p*(v.vg-v.ag))/(v.r0g*(v.r0p+(mu(v,vkn)+1.0)/v.r0k))-vkn);
+T f8(Valve v, T vkn) {
+	return ((v.r0k*(v.ap+mu(v,vkn)*(v.vg+h(v,vkn)-alpha(v,vkn))+v.r0p*v.ak)/(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-(v.r0k*v.r0p*(v.vg-v.ag))/(v.r0g*(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-vkn);
 }
 
-T f1(Valve v, T vkn) {
+T f10(Valve v, T vkn) {
 	return ((v.r0k*(v.ap+mu(v,vkn)*(v.ag+h(v,vkn)-alpha(v,vkn))+v.r0p*v.ak)/(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-vkn);
 }
 
-T f2(Valve v, T vgn) {
+T f12(Valve v, T vgn) {
 	return ((v.r0g*((v.voff+v.vk)*beta(v,vgn)-v.vk+v.ap)+v.r0p*v.ag)/(v.r0g*beta(v, vgn)+v.r0p)+(v.r0g*v.r0p*(v.ak-v.vk))/(v.r0k*(v.r0g*beta(v,vgn)+v.r0p))-vgn);
 }
 
-T secantf1(Valve v, T i1, T i2) {
-	T tolerance = 1e-4;
+T secantf8(Valve v, T i1, T i2) {
+	T tolerance = 1e-6;
 	T vkn = 0.0;
 	for (int i = 0; i < 15; ++i) {
-		vkn = i1 - f1(v,i1)*(i1-i2)/(f1(v,i1)-f1(v,i2));
+		vkn = i1 - f8(v,i1)*(i1-i2)/(f8(v,i1)-f8(v,i2));
 		i2 = i1;
 		i1 = vkn;
-		if (fabs(f1(v,vkn)) < tolerance) break;
+		if (fabs(f8(v,vkn)) < tolerance) break;
 	} 
 	//printf("%f\n",vkn);
 	return vkn;
 }
 
-T secantf0(Valve v, T i1, T i2) {
-	T tolerance = 1e-4;
+T secantf10(Valve v, T i1, T i2) {
+	T tolerance = 1e-6;
 	T vkn = 0.0;
  	for (int i = 0; i<15; ++i) {
-		vkn = i1 - ff0(v,i1)*(i1-i2)/(ff0(v,i1)-ff0(v,i2));
+		vkn = i1 - f10(v,i1)*(i1-i2)/(f10(v,i1)-f10(v,i2));
 		i2 = i1;
 		i1 = vkn;
-		if (fabs(ff0(v,vkn)) < tolerance) break;
+		if (fabs(f10(v,vkn)) < tolerance) break;
 	}
 	return vkn;
 }
 
-T secantf2(Valve v, T i1, T i2) {
-	T tolerance = 1e-4;
+T secantf12(Valve v, T i1, T i2) {
+	T tolerance = 1e-6;
 	T vgn = 0.0;
  	for (int i = 0; i<15; ++i) {
-		vgn = i1 - f2(v,i1)*(i1-i2)/(f2(v,i1)-f2(v,i2));
+		vgn = i1 - f12(v,i1)*(i1-i2)/(f12(v,i1)-f12(v,i2));
 		i2 = i1;
 		i1 = vgn;
-		if (fabs(f2(v,vgn)) < tolerance) break;
+		if (fabs(f12(v,vgn)) < tolerance) break;
 	}
 	return vgn;
 }
@@ -242,8 +242,8 @@ void par::setWD(T waveparent) {
 }
 
 T inv::waveUp() {
-	WDF::WU = -left->WU;
-	return WU;
+	WDF::WU = left->waveUp(); 		//-
+	return -WU;
 }
 
 void inv::setWD(T waveparent) {
@@ -288,10 +288,10 @@ T V::waveUp() {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs/10.0;
-	T gain = 0.001;
+	T gain = 4.0;
 	T f0 = 100.0;
-	T input[5000] = { 0.0 };
-	T output[5000] = { 0.0 };
+	T input[15000] = { 0.0 };
+	T output[15000] = { 0.0 };
 	int i;
 	for (i = 0; i < N; ++i) {
 		input[i] = gain*sin(2.0*M_PI*f0/Fs*i);
@@ -305,10 +305,10 @@ int main(){
 	T rp = 100e3;
 	T rg = 20e3;
 	T ri = 1e6;
-	T rk = 100; //Made up value
+	T rk = 1e3; //from paper
 	T e = 250;
 
-	V Vi = V(0.0,1.0);
+	V Vi = V(0.0,100.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -374,46 +374,54 @@ int main(){
 		v.r0k = P1.PortRes;
 		v.r0p = P2.PortRes;
 
-		v.vg = v.ag;
-		T vg1;
+		T vg0, vg1, vk0, vk1;
 
-		T tol = 1e-6;
+		T tol = 1e-4;
 		
-		if (v.vg - v.vk <= v.voff) {
-//			printf("Condition satisfied\n");
-			T vk0 = v.ak;
-			T vk1 = v.ak + f1(v, v.ak);
-			v.vk = secantf1(v, vk0, vk1);
+//		if (v.vg - v.vk <= v.voff) {
+			v.vg = v.ag;
+
+			vk0 = v.ak;
+			vk1 = v.ak + f10(v, v.ak);
+			v.vk = secantf10(v, vk0, vk1);
 		//	printf("vgk=%f f1=%f\n",v.vg-v.vk,f1(v,v.vk));
-
+/*
  		} else {
-			T vg0 = v.ag;
-			v.vg = vg0;
-			
-			T vk0 = v.ak;
-			T vk1 = v.ak + f1(v, v.ak);
-			vg1 = v.ag + f2(v,v.ag);
-Start:
-			v.vk = secantf0(v, vk0, vk1);
-			vk0 = v.vk;
+			v.vg = v.ag;
 
+			vk0 = v.ak;
+			vk1 = v.ak + f10(v, v.ak);
+			v.vk = secantf10(v, vk0, vk1);
+			
+			vg0 = v.ag;
+			v.vg = vg0;
+			vg1 = v.ag + f12(v,v.ag);
+			
+			vk0 = v.ak;
+			vk1 = v.ak + f8(v, v.ak);
+			
+
+Start:
+			v.vk = secantf8(v, vk0, vk1);
+			vk0 = v.vk;
+			
 			if (v.vg - v.vk <= v.voff) goto Done;
 			
-			v.vg = secantf2(v, vg0, vg1);
+			v.vg = secantf12(v, vg0, vg1);
 			vg1 = vg0;
 			vg0 = v.vg;
 
-			v.vk = vk0 - ff0(v,vk0)*(vk0-vk1)/(ff0(v,vk0)-ff0(v,vk1));
+			v.vk = vk0 - f10(v,vk0)*(vk0-vk1)/(f10(v,vk0)-f10(v,vk1));
 			vk1 = vk0;
 			vk0 = v.vk;
 
-			if (fabs(ff0(v, v.vk))<tol) goto Done;
+			if (fabs(f10(v, v.vk))<tol) goto Done;
 			
 			goto Start;
 		}
 
 Done:
-
+*/
 		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
 		
 //		printf("g:%f k:%f p:%f\n",v.vg,v.vk,v.vp);
