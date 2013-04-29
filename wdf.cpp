@@ -17,15 +17,13 @@ public:
 
 class OnePort : public WDF {
 public:
-	T WD;
-	T WU;
 	void setWD(T waveparent);
 };
 
 class Adaptor : public OnePort {
 public:
-	Adaptor *left;
-	Adaptor *right;
+	WDF *left;
+	WDF *right;
 	Adaptor(bool flag);
 };
 
@@ -137,7 +135,7 @@ int main(){
 	}
 
 	//Model
-	V V1 = V(30.0,1.0);
+	V V1 = V(0.0,1.0);
 	R R1 = R(80.0);
 	T capval = 0.000035;
 	C C1 = C(capval,Fs);
