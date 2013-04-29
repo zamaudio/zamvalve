@@ -288,18 +288,18 @@ T V::waveUp() {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs*3.0;
-	T gain = 30.0;
-	T f0 =1501.0;
+	T gain = 4.0;
+	T f0 =200.0;
 	T input[150000] = { 0.0 };
 	T output[150000] = { 0.0 };
 	int i;
 	for (i = 0; i < N; ++i) {
-		input[i] = gain*i/N*sin(2.0*M_PI*f0/Fs*i);
+		input[i] = gain*sin(2.0*M_PI*f0/Fs*i);
 	}
 
 	//Model
 	T ci = 100e-9;
-	T ck = 10e-7;
+	T ck = 10e-8;
 	T co = 10e-9;
 	T ro = 1e6;
 	T rp = 100e3;
@@ -442,7 +442,7 @@ Done:
 		//v.vp = (P2.WD+P2.WU)/2.0;
 
 		//Step 6: measure the voltage across the output load resistance and set the sample
-		output[j] = Ro.Voltage();
+		output[j] = Ro.Voltage()/gain;
 		printf("%f %f %f\n", j/Fs, input[j], output[j]);
 	}
 }
