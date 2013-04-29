@@ -11,24 +11,22 @@ public:
 	WDF();
 	T Voltage();
 	T state;
-	virtual T waveUp() {}
-	void setWD(T waveparent);
+	virtual T waveUp() = 0;
+	virtual void setWD(T waveparent) = 0;
 };
 
 class OnePort : public WDF {
 public:
-	//T WD;
-	//T WU;
-	void setWD(T val);
-};
-
-class Adaptor : public WDF {
-public:
 	T WD;
 	T WU;
-	WDF *left;
-	WDF *right;
-	void setWD(T val);
+	void setWD(T waveparent);
+};
+
+class Adaptor : public OnePort {
+public:
+	Adaptor *left;
+	Adaptor *right;
+	Adaptor(bool flag);
 };
 
 class ser : public Adaptor {
@@ -38,19 +36,19 @@ public:
 	void setWD(T waveparent);	
 };
 
-class R : public OnePort {
+class R : public Adaptor {
 public:
 	R(T res);
 	T waveUp();
 };
 
-class C : public OnePort {
+class C : public Adaptor {
 public:
 	C(T c, T fs);
 	T waveUp();
 };
 
-class V : public OnePort {
+class V : public Adaptor {
 public:
 	T e;
 	V(T ee, T r);
@@ -59,40 +57,43 @@ public:
 
 WDF::WDF() {}
 
+void OnePort::setWD(T val) {
+	WD = val;
+	WDF::WD = val;
+	state = val;
+}
+
 T WDF::Voltage() {
 	T Volts = (WU + WD) / 2.0;
 	return Volts;
 }
 
-template <class Port1, class Port2>ser::ser(Port1 *l, Port2 *r) {
+template <class Port1, class Port2>ser::ser(Port1 *l, Port2 *r) : Adaptor(true) {
 	left = l;
 	right = r;
 	PortRes = l->PortRes + r->PortRes;
 }
 
 T ser::waveUp() {
-	WU = -left->waveUp() - right->waveUp();
+	Adaptor::WU = -left->waveUp() - right->waveUp();
+	WDF::WU = -left->waveUp() - right->waveUp();
 	return WU;
 }
 
-void Adaptor::setWD(T waveparent) {
-	Adaptor::WD = waveparent;
+Adaptor::Adaptor(bool flag) {
+	if (!flag) {
+		left = NULL;
+		right = NULL;
+	}
 }
 
 void ser::setWD(T waveparent) {
 	Adaptor::setWD(waveparent);
-	//left->setWD(left->WU-(left->PortRes/PortRes)*(waveparent+left->WU+right->WU));
-	//right->setWD(right->WU-(right->PortRes/PortRes)*(waveparent+left->WU+right->WU));
 	left->setWD(left->WU-(2.0*left->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
 	right->setWD(right->WU-(2.0*right->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
 }
 
-void WDF::setWD(T val) {
-	WD = val;
-	state = val;
-}
-
-R::R(T res) {
+R::R(T res) : Adaptor(false) {
 	PortRes = res;
 }
 
@@ -101,7 +102,7 @@ T R::waveUp() {
 	return WU;
 }
 
-C::C(T c, T fs) {
+C::C(T c, T fs) : Adaptor(false) {
 	PortRes = 1.0/(2.0*c*fs);
 	state = 0.0;
 }
@@ -111,7 +112,7 @@ T C::waveUp() {
 	return WU;
 }
 
-V::V(T ee, T r) {
+V::V(T ee, T r) : Adaptor(false) {
 	e = ee;
 	PortRes = r;
 	WD = 0.0;  //always?
@@ -136,7 +137,7 @@ int main(){
 	}
 
 	//Model
-	V V1 = V(0.0,1.0);
+	V V1 = V(30.0,1.0);
 	R R1 = R(80.0);
 	T capval = 0.000035;
 	C C1 = C(capval,Fs);
@@ -153,7 +154,7 @@ int main(){
 		r = (rdiode-S1.PortRes)/(rdiode+S1.PortRes);
 		S1.setWD(r*S1.WU);
 		vdiode = (S1.WD+S1.WU)/2.0;
-		output[j] = -S1.right->Voltage();
+		output[j] = R1.Voltage();//-S1.right->Voltage();
 		printf("%f %f %f\n", j/Fs, input[j], output[j]);
 	}
 }
