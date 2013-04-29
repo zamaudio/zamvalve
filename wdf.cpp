@@ -242,13 +242,13 @@ void par::setWD(T waveparent) {
 }
 
 T inv::waveUp() {
-	WDF::WU = left->waveUp(); 		//-
-	return -WU;
+	WDF::WU = -left->waveUp(); 		//-
+	return WU;
 }
 
 void inv::setWD(T waveparent) {
 	//Adaptor::setWD(-waveparent);
-	WD = waveparent;		//+
+	WD = -waveparent;		//-
 	left->WD = -waveparent;		//-
 	left->setWD(-waveparent);	//-
 	
@@ -276,7 +276,7 @@ T C::waveUp() {
 V::V(T ee, T r) : Adaptor(ONEPORT) {
 	e = ee;
 	PortRes = r;
-	WD = 0.0;  //always?
+//	WD = 0.0;  //always?
 }
 
 T V::waveUp() {
@@ -287,19 +287,19 @@ T V::waveUp() {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs/10.0;
-	T gain = 4.0;
-	T f0 = 100.0;
-	T input[15000] = { 0.0 };
-	T output[15000] = { 0.0 };
+	int N = Fs*3.0;
+	T gain = 30.0;
+	T f0 =1501.0;
+	T input[150000] = { 0.0 };
+	T output[150000] = { 0.0 };
 	int i;
 	for (i = 0; i < N; ++i) {
-		input[i] = gain*sin(2.0*M_PI*f0/Fs*i);
+		input[i] = gain*i/N*sin(2.0*M_PI*f0/Fs*i);
 	}
 
 	//Model
 	T ci = 100e-9;
-	T ck = 10e-6;
+	T ck = 10e-7;
 	T co = 10e-9;
 	T ro = 1e6;
 	T rp = 100e3;
@@ -308,7 +308,7 @@ int main(){
 	T rk = 1e3; //from paper
 	T e = 250;
 
-	V Vi = V(0.0,100.0);
+	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
