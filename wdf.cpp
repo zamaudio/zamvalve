@@ -191,15 +191,16 @@ void par::setWD(T waveparent) {
 }
 
 T inv::waveUp() {
-	Adaptor::WU = -left->WD; // polarity? WD
-	WDF::WU = -left->WD;
+	WDF::WU = -left->WU;
 	return WU;
 }
 
 void inv::setWD(T waveparent) {
 	//Adaptor::setWD(-waveparent);
 	WD = waveparent;
-	left->setWD(waveparent);
+	left->WD = -waveparent;
+	left->setWD(-waveparent);
+	
 }
 
 R::R(T res) : Adaptor(ONEPORT) {
@@ -320,7 +321,7 @@ int main(){
 		v.ag = S1.WU;
 		v.ak = P1.WU;
 		v.ap = P2.WU;
-		v.r0g = S1.PortRes;
+		v.r0g = I1.PortRes;
 		v.r0k = P1.PortRes;
 		v.r0p = P2.PortRes;
 
@@ -344,9 +345,9 @@ int main(){
 		P2.setWD(v.bp);
 
 		//Step 5: remember the old voltages for next time
-		v.vg = (I1.WD+I1.WU)/2.0;
-		v.vk = (P1.WD+P1.WU)/2.0;
-		v.vp = (P2.WD+P2.WU)/2.0;
+		//v.vg = (I1.WD+I1.WU)/2.0;
+		//v.vk = (P1.WD+P1.WU)/2.0;
+		//v.vp = (P2.WD+P2.WU)/2.0;
 
 		//Step 6: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
