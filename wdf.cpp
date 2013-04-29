@@ -8,6 +8,52 @@
 
 typedef double T;
 
+typedef struct valve {
+
+	T r0g; T ag; T bg; T vg;
+	T r0k; T ak; T bk; T vk;
+	T r0p; T ap; T bp; T vp;
+	T D, K, voff, mumin, mu0, mu1, mu2, mu3, h0, Gmin, G0, G1, G2, G3;
+} Valve;
+
+T alpha(Valve v, T vk) {
+	T vgk = v.vg - vk;
+	T G = max(v.Gmin, v.G0*vgk*0.25 + v.G1*vgk*0.5 + v.G2*vgk*0.75 + v.G3*vgk);
+	return (powf((vk-v.ak)/(v.r0k*G),2.0/3.0));
+}
+
+T h(Valve v, T vk) {
+	T vgk = v.vg - vk;
+	return (v.h0*vgk*1.0/2.0);
+}
+
+T mu(Valve v, T vk) {
+	T vgk = v.vg - vk;
+	return (max(v.mumin, v.mu0*vgk*0.25 + v.mu1*vgk*0.5 + v.mu2*vgk*0.75 + v.mu3*vgk));
+}
+
+T beta(Valve v, T vk) {
+	return (powf(-1.0/v.D*(v.r0g/v.r0k*((v.ak-vk)/(v.ag-v.vg)+1.0)),1.0/v.K));
+}
+
+T f0(Valve v, T vkn) {
+	return ((v.r0k*(v.ap+mu(v,vkn)*(v.vg+h(v,vkn)-alpha(v,vkn))+v.r0p*v.ak)/(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-(v.r0k*v.r0p*(v.vg-v.ag))/(v.r0g*(v.r0p+(mu(v,vkn)+1.0)/v.r0k))-vkn);
+}
+
+T f1(Valve v, T vkn) {
+	return ((v.r0k*(v.ap+mu(v,vkn)*(v.ag+h(v,vkn)-alpha(v,vkn))+v.r0p*v.ak)/(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-vkn);
+}
+
+T secantf1(Valve v, T i1, T i2) {
+	T tolerance = 1e-6;
+	T vkn = 0.0;
+	do {
+		vkn = i1 - f1(v,i1)*(i1-i2)/(f1(v,i1)-f1(v,i2));
+		i2 = i1;
+		i1 = vkn;
+	} while (fabs(f1(v,vkn)) > tolerance);
+}
+
 class WDF {
 public:
 	T WD;
@@ -145,14 +191,15 @@ void par::setWD(T waveparent) {
 }
 
 T inv::waveUp() {
-	Adaptor::WU = left->WD; // polarity?
-	WDF::WU = left->WD;
+	Adaptor::WU = -left->WD; // polarity? WD
+	WDF::WU = -left->WD;
 	return WU;
 }
 
 void inv::setWD(T waveparent) {
-	Adaptor::setWD(waveparent);
-	left->setWD(-waveparent);
+	//Adaptor::setWD(-waveparent);
+	WD = waveparent;
+	left->setWD(waveparent);
 }
 
 R::R(T res) : Adaptor(ONEPORT) {
@@ -189,7 +236,7 @@ T V::waveUp() {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs/10.0;
-	T gain = 30.0;
+	T gain = 4.0;
 	T f0 = 100.0;
 	T input[5000] = { 0.0 };
 	T output[5000] = { 0.0 };
@@ -209,7 +256,7 @@ int main(){
 	T rk = 100; //Made up value
 	T e = 250;
 
-	V Vi = V(0.0,1.0);
+	V Vi = V(0.0,100.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -219,7 +266,8 @@ int main(){
 	R Rk = R(rk);
 	V E = V(e, rp);
 	
- 	ser S0 = ser(&Ci, &Vi);
+
+	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
 	par P0 = par(&I0, &Ri);
 	ser S1 = ser(&Rg, &P0);
@@ -230,30 +278,32 @@ int main(){
 	ser S2 = ser(&Co, &Ro);
 	inv I2 = inv(&S2);
 	par P2 = par(&I2, &E);
-	
-	T r0g; T ag; T bg; T vg;
-	T r0k; T ak; T bk; T vk;
-	T r0p; T ap; T bp; T vp;
 
-	T alpha;
-	T beta;
+/*
+	ser S0 = ser(&Ci, &Vi);
+	par P0 = par(&S0, &Ri);
+	ser S1 = ser(&Rg, &P0);
 
-	T vgk;
-	T D, K, voff, mu, mumin, mu0, mu1, mu2, mu3, h, h0, G, Gmin, G0, G1, G2, G3;
-	D = 0.12;
-	K = 1.1;
-	voff = -0.2;
-	mumin = 1e-9;
-	mu0 = 99.705;
-	mu1 = -22.98e-3;
-	mu2 = -0.4489;
-	mu3 = -22.27e-3;
-	h0 = 0.6;
-	Gmin = 1e-9;
-	G0 = 1.102e-3;
-	G1 = 15.12e-6;
-	G2 = -31.56e-6;
-	G3 = -3.286e-6;
+	par P1 = par(&Ck, &Rk);
+
+	ser S2 = ser(&Co, &Ro);
+	par P2 = par(&S2, &E);
+*/	
+	Valve v;
+	v.D = 0.12;
+	v.K = 1.1;
+	v.voff = -0.2;
+	v.mumin = 1e-9;
+	v.mu0 = 99.705;
+	v.mu1 = -22.98e-3;
+	v.mu2 = -0.4489;
+	v.mu3 = -22.27e-3;
+	v.h0 = 0.6;
+	v.Gmin = 1e-9;
+	v.G0 = 1.102e-3;
+	v.G1 = 15.12e-6;
+	v.G2 = -31.56e-6;
+	v.G3 = -3.286e-6;
 
 	for (int j = 0; j < N; ++j) {
 		//Step 1: read input sample as voltage for the source
@@ -267,39 +317,36 @@ int main(){
 		//Step 3: compute wave reflections at non-linearity
 		//rdiode = 125.56*exp(-0.036*vdiode);
 		//r = (rdiode-S1.PortRes)/(rdiode+S1.PortRes);
-		ag = I1.WU;
-		ak = P1.WU;
-		ap = P2.WU;
-		r0g = I1.PortRes;
-		r0k = P1.PortRes;
-		r0p = P2.PortRes;
+		v.ag = S1.WU;
+		v.ak = P1.WU;
+		v.ap = P2.WU;
+		v.r0g = S1.PortRes;
+		v.r0k = P1.PortRes;
+		v.r0p = P2.PortRes;
+
+		v.vg = v.ag;
 		
-		alpha = powf((vk-ak)/(r0k*G),2.0/3.0);
-		beta = powf(-1.0/D*(r0g/r0k*((ak-vk)/(ag-vg)+1.0)),1.0/K);
+		T vk0 = v.ak;
+		T vk1 = v.ak + f1(v, v.ak);
+		v.vk = secantf1(v, vk0, vk1);
+		
+		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
+		
+		//printf("g:%f k:%f p:%f\n",v.vg,v.vk,v.vp);
 
-		vgk = vg - vk;
-		h = h0*vgk*1.0/2.0;
-		G = max(Gmin, G0*vgk*0.25 + G1*vgk*0.5 + G2*vgk*0.75 + G3*vgk);
-		mu = max(mumin, mu0*vgk*0.25 + mu1*vgk*0.5 + mu2*vgk*0.75 + mu3*vgk);
-
-		if (vgk <= voff) {
-			vg = ag;
-			vk = (r0k*(ap+mu*(ag+h-alpha))+r0p*ak)/(r0p + (mu+1.0)*r0k);
-		}
-
-		bg = 2.0*vg - ag;
-		bk = 2.0*vk - ak;
-		bp = 2.0*vp - ap;
+		v.bg = 2.0*v.vg - v.ag;
+		v.bk = 2.0*v.vk - v.ak;
+		v.bp = 2.0*v.vp - v.ap;
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		I1.setWD(bg);
-		P1.setWD(bk);
-		P2.setWD(bp);
+		I1.setWD(v.bg);
+		P1.setWD(v.bk);
+		P2.setWD(v.bp);
 
 		//Step 5: remember the old voltages for next time
-		vg = (I1.WD+I1.WU)/2.0;
-		vk = (P1.WD+P1.WU)/2.0;
-		vp = (P2.WD+P2.WU)/2.0;
+		v.vg = (I1.WD+I1.WU)/2.0;
+		v.vk = (P1.WD+P1.WU)/2.0;
+		v.vp = (P2.WD+P2.WU)/2.0;
 
 		//Step 6: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
