@@ -51,7 +51,7 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	//if (v.ag == vg) vg = v.ag - 0.0001;
+	if (v.ag == vg) vg = v.ag - 0.000001;
 	return (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*((v.ak-v.vk)/(v.ag-vg)+1.0))),1.0/v.K));
 }
 
@@ -308,7 +308,7 @@ int main(){
 	T rk = 1e3; //from paper
 	T e = 250;
 
-	V Vi = V(0.0,1000.0);
+	V Vi = V(0.0,10000.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -377,7 +377,8 @@ int main(){
 		T vg0, vg1, vk0, vk1;
 
 		T tol = 1e-4;
-		
+		int cnt = 0;
+
 //		if (v.vg - v.vk <= v.voff) {
 			v.vg = v.ag;
 
@@ -415,7 +416,7 @@ Start:
 			vk1 = vk0;
 			vk0 = v.vk;
 
-			if (fabs(f10(v, v.vk))<tol) goto Done;
+			if (++cnt>50 || fabs(f10(v, v.vk))<tol) goto Done;
 			
 			goto Start;
 		}
