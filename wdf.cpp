@@ -1,3 +1,22 @@
+/*
+wdf.cpp
+Copyright (C) 2013  Damien Zammit
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #include <stdio.h>
 #include <cmath>
 
@@ -9,7 +28,6 @@
 typedef double T;
 
 typedef struct valve {
-
 	T r0g; T ag; T bg; T vg;
 	T r0k; T ak; T bk; T vk;
 	T r0p; T ap; T bp; T vp;
@@ -18,22 +36,23 @@ typedef struct valve {
 
 T alpha(Valve v, T vk) {
 	T vgk = v.vg - vk;
-	T G = max(v.Gmin, v.G0*vgk*0.25 + v.G1*vgk*0.5 + v.G2*vgk*0.75 + v.G3*vgk);
-	return (powf((vk-v.ak)/(v.r0k*G),2.0/3.0));
+	T G = max(v.Gmin, v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk);
+	return (powf(fabs((vk-v.ak)/(v.r0k*G)),2.0/3.0));
 }
 
 T h(Valve v, T vk) {
 	T vgk = v.vg - vk;
-	return (v.h0*vgk*1.0/2.0);
+	return (v.h0);
 }
 
 T mu(Valve v, T vk) {
 	T vgk = v.vg - vk;
-	return (max(v.mumin, v.mu0*vgk*0.25 + v.mu1*vgk*0.5 + v.mu2*vgk*0.75 + v.mu3*vgk));
+	return (max(v.mumin, v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk));
 }
 
 T beta(Valve v, T vg) {
-	return (powf(-1.0/v.D*(v.r0g/v.r0k*((v.ak-v.vk)/(v.ag-vg)+1.0)),1.0/v.K));
+	if (v.ag == vg) vg = v.ag - 0.0001;
+	return (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*((v.ak-v.vk)/(v.ag-vg)+1.0))),1.0/v.K));
 }
 
 T ff0(Valve v, T vkn) {
@@ -45,41 +64,44 @@ T f1(Valve v, T vkn) {
 }
 
 T f2(Valve v, T vgn) {
-	return ((v.r0g*((v.voff+v.vk)*beta(v,vgn)-v.vk+v.ap)+v.r0p*v.ag)/(v.r0g*beta(v, vgn)+v.r0p)+(v.r0g*v.r0p*(v.ak-v.vk))/(v.r0k*(v.r0g*beta(v,vgn)+v.r0p)));
+	return ((v.r0g*((v.voff+v.vk)*beta(v,vgn)-v.vk+v.ap)+v.r0p*v.ag)/(v.r0g*beta(v, vgn)+v.r0p)+(v.r0g*v.r0p*(v.ak-v.vk))/(v.r0k*(v.r0g*beta(v,vgn)+v.r0p))-vgn);
 }
 
 T secantf1(Valve v, T i1, T i2) {
-	T tolerance = 1e-6;
+	T tolerance = 1e-4;
 	T vkn = 0.0;
-	do {
+	for (int i = 0; i < 15; ++i) {
 		vkn = i1 - f1(v,i1)*(i1-i2)/(f1(v,i1)-f1(v,i2));
 		i2 = i1;
 		i1 = vkn;
-	} while (fabs(f1(v,vkn)) > tolerance);
-	printf("%f\n",ff0(v,vkn));
+		if (fabs(f1(v,vkn)) < tolerance) break;
+	} 
+	//printf("%f\n",vkn);
 	return vkn;
 }
 
 T secantf0(Valve v, T i1, T i2) {
-	T tolerance = 1e-6;
+	T tolerance = 1e-4;
 	T vkn = 0.0;
-	do {
+ 	for (int i = 0; i<15; ++i) {
 		vkn = i1 - ff0(v,i1)*(i1-i2)/(ff0(v,i1)-ff0(v,i2));
 		i2 = i1;
 		i1 = vkn;
-	} while (fabs(ff0(v,vkn)) > tolerance);
+		if (fabs(ff0(v,vkn)) < tolerance) break;
+	}
 	return vkn;
 }
 
 T secantf2(Valve v, T i1, T i2) {
-	T tolerance = 1e-6;
-	T vkn = 0.0;
-	do {
-		vkn = i1 - f2(v,i1)*(i1-i2)/(f2(v,i1)-f2(v,i2));
+	T tolerance = 1e-4;
+	T vgn = 0.0;
+ 	for (int i = 0; i<15; ++i) {
+		vgn = i1 - f2(v,i1)*(i1-i2)/(f2(v,i1)-f2(v,i2));
 		i2 = i1;
-		i1 = vkn;
-	} while (fabs(f2(v,vkn)) > tolerance);
-	return vkn;
+		i1 = vgn;
+		if (fabs(f2(v,vgn)) < tolerance) break;
+	}
+	return vgn;
 }
 
 
@@ -226,9 +248,9 @@ T inv::waveUp() {
 
 void inv::setWD(T waveparent) {
 	//Adaptor::setWD(-waveparent);
-	WD = waveparent;
-	left->WD = -waveparent;
-	left->setWD(-waveparent);
+	WD = waveparent;		//+
+	left->WD = -waveparent;		//-
+	left->setWD(-waveparent);	//-
 	
 }
 
@@ -266,7 +288,7 @@ T V::waveUp() {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs/10.0;
-	T gain = 0.1;
+	T gain = 0.001;
 	T f0 = 100.0;
 	T input[5000] = { 0.0 };
 	T output[5000] = { 0.0 };
@@ -312,7 +334,7 @@ int main(){
 /*
 	ser S0 = ser(&Ci, &Vi);
 	par P0 = par(&S0, &Ri);
-	ser S1 = ser(&Rg, &P0);
+	ser I1 = ser(&Rg, &P0);
 
 	par P1 = par(&Ck, &Rk);
 
@@ -339,15 +361,13 @@ int main(){
 		//Step 1: read input sample as voltage for the source
 		Vi.e = input[j];
 
-		//Step 2: propagate waves up to the root
+		//Step 2: propagate waves up to the 3 roots
 		I1.waveUp();
 		P1.waveUp();
 		P2.waveUp();
 
 		//Step 3: compute wave reflections at non-linearity
-		//rdiode = 125.56*exp(-0.036*vdiode);
-		//r = (rdiode-S1.PortRes)/(rdiode+S1.PortRes);
-		v.ag = S1.WU;
+		v.ag = I1.WU;
 		v.ak = P1.WU;
 		v.ap = P2.WU;
 		v.r0g = I1.PortRes;
@@ -358,27 +378,31 @@ int main(){
 		T vg1;
 
 		T tol = 1e-6;
-
-//		if (v.vg - v.vk <= v.voff) {
+		
+		if (v.vg - v.vk <= v.voff) {
 //			printf("Condition satisfied\n");
 			T vk0 = v.ak;
 			T vk1 = v.ak + f1(v, v.ak);
 			v.vk = secantf1(v, vk0, vk1);
-/*		} else {
+		//	printf("vgk=%f f1=%f\n",v.vg-v.vk,f1(v,v.vk));
+
+ 		} else {
 			T vg0 = v.ag;
 			v.vg = vg0;
 			
 			T vk0 = v.ak;
 			T vk1 = v.ak + f1(v, v.ak);
+			vg1 = v.ag + f2(v,v.ag);
 Start:
 			v.vk = secantf0(v, vk0, vk1);
 			vk0 = v.vk;
 
 			if (v.vg - v.vk <= v.voff) goto Done;
 			
-			vg1 = v.ag + f2(v,v.ag);
 			v.vg = secantf2(v, vg0, vg1);
-			
+			vg1 = vg0;
+			vg0 = v.vg;
+
 			v.vk = vk0 - ff0(v,vk0)*(vk0-vk1)/(ff0(v,vk0)-ff0(v,vk1));
 			vk1 = vk0;
 			vk0 = v.vk;
@@ -389,10 +413,10 @@ Start:
 		}
 
 Done:
-*/
+
 		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
 		
-		//printf("g:%f k:%f p:%f\n",v.vg,v.vk,v.vp);
+//		printf("g:%f k:%f p:%f\n",v.vg,v.vk,v.vp);
 
 		v.bg = 2.0*v.vg - v.ag;
 		v.bk = 2.0*v.vk - v.ak;
