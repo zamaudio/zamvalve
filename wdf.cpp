@@ -51,7 +51,6 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	if (v.ag == vg) vg = v.ag - 0.000001;
 	return (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*((v.ak-v.vk)/(v.ag-vg)+1.0))),1.0/v.K));
 }
 
@@ -67,38 +66,38 @@ T f12(Valve v, T vgn) {
 	return ((v.r0g*((v.voff+v.vk)*beta(v,vgn)-v.vk+v.ap)+v.r0p*v.ag)/(v.r0g*beta(v, vgn)+v.r0p)+(v.r0g*v.r0p*(v.ak-v.vk))/(v.r0k*(v.r0g*beta(v,vgn)+v.r0p))-vgn);
 }
 
-T secantf8(Valve v, T i1, T i2) {
+T secantf8(Valve v, T *i1, T *i2) {
 	T tolerance = 1e-6;
 	T vkn = 0.0;
 	for (int i = 0; i < 15; ++i) {
-		vkn = i1 - f8(v,i1)*(i1-i2)/(f8(v,i1)-f8(v,i2));
-		i2 = i1;
-		i1 = vkn;
+		vkn = *i1 - f8(v,*i1)*(*i1-*i2)/(f8(v,*i1)-f8(v,*i2));
+		*i2 = *i1;
+		*i1 = vkn;
 		if (fabs(f8(v,vkn)) < tolerance) break;
 	} 
 	//printf("%f\n",vkn);
 	return vkn;
 }
 
-T secantf10(Valve v, T i1, T i2) {
+T secantf10(Valve v, T *i1, T *i2) {
 	T tolerance = 1e-6;
 	T vkn = 0.0;
  	for (int i = 0; i<15; ++i) {
-		vkn = i1 - f10(v,i1)*(i1-i2)/(f10(v,i1)-f10(v,i2));
-		i2 = i1;
-		i1 = vkn;
+		vkn = *i1 - f10(v,*i1)*(*i1-*i2)/(f10(v,*i1)-f10(v,*i2));
+		*i2 = *i1;
+		*i1 = vkn;
 		if (fabs(f10(v,vkn)) < tolerance) break;
 	}
 	return vkn;
 }
 
-T secantf12(Valve v, T i1, T i2) {
+T secantf12(Valve v, T *i1, T *i2) {
 	T tolerance = 1e-6;
 	T vgn = 0.0;
  	for (int i = 0; i<15; ++i) {
-		vgn = i1 - f12(v,i1)*(i1-i2)/(f12(v,i1)-f12(v,i2));
-		i2 = i1;
-		i1 = vgn;
+		vgn = *i1 - f12(v,*i1)*(*i1-*i2)/(f12(v,*i1)-f12(v,*i2));
+		*i2 = *i1;
+		*i1 = vgn;
 		if (fabs(f12(v,vgn)) < tolerance) break;
 	}
 	return vgn;
@@ -276,7 +275,7 @@ T C::waveUp() {
 V::V(T ee, T r) : Adaptor(ONEPORT) {
 	e = ee;
 	PortRes = r;
-//	WD = 0.0;  //always?
+	WD = 0.0;  //always?
 }
 
 T V::waveUp() {
@@ -287,11 +286,11 @@ T V::waveUp() {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs*3.0;
-	T gain = 4.0;
-	T f0 =200.0;
-	T input[150000] = { 0.0 };
-	T output[150000] = { 0.0 };
+	int N = Fs;
+	T gain = 40.5;
+	T f0 =1200.0;
+	T input[384000] = { 0.0 };
+	T output[384000] = { 0.0 };
 	int i;
 	for (i = 0; i < N; ++i) {
 		input[i] = gain*sin(2.0*M_PI*f0/Fs*i);
@@ -308,7 +307,7 @@ int main(){
 	T rk = 1e3; //from paper
 	T e = 250;
 
-	V Vi = V(0.0,10000.0);
+	V Vi = V(0.0,1000000.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -330,8 +329,8 @@ int main(){
 	ser S2 = ser(&Co, &Ro);
 	inv I2 = inv(&S2);
 	par P2 = par(&I2, &E);
-
 /*
+
 	ser S0 = ser(&Ci, &Vi);
 	par P0 = par(&S0, &Ri);
 	ser I1 = ser(&Rg, &P0);
@@ -367,6 +366,9 @@ int main(){
 		P2.waveUp();
 
 		//Step 3: compute wave reflections at non-linearity
+		v.vk = 0.0;
+		v.vg = 0.0;
+		v.vp = 0.0;
 		v.ag = I1.WU;
 		v.ak = P1.WU;
 		v.ap = P2.WU;
@@ -378,39 +380,30 @@ int main(){
 
 		T tol = 1e-4;
 		int cnt = 0;
+		v.vg = v.ag;
 
-//		if (v.vg - v.vk <= v.voff) {
-			v.vg = v.ag;
-
+		if (v.vg - v.vk <= v.voff) {
 			vk0 = v.ak;
 			vk1 = v.ak + f10(v, v.ak);
-			v.vk = secantf10(v, vk0, vk1);
-		//	printf("vgk=%f f1=%f\n",v.vg-v.vk,f1(v,v.vk));
-/*
+			v.vk = secantf10(v, &vk0, &vk1);
+			//printf("vgk=%f f10()=%f\n",v.vg-v.vk,f10(v,v.vk));
+
  		} else {
-			v.vg = v.ag;
-
 			vk0 = v.ak;
 			vk1 = v.ak + f10(v, v.ak);
-			v.vk = secantf10(v, vk0, vk1);
+			v.vk = secantf10(v, &vk0, &vk1);
 			
 			vg0 = v.ag;
-			v.vg = vg0;
 			vg1 = v.ag + f12(v,v.ag);
 			
-			vk0 = v.ak;
-			vk1 = v.ak + f8(v, v.ak);
 			
 
 Start:
-			v.vk = secantf8(v, vk0, vk1);
-			vk0 = v.vk;
+			v.vk = secantf8(v, &vk0, &vk1);
 			
 			if (v.vg - v.vk <= v.voff) goto Done;
 			
-			v.vg = secantf12(v, vg0, vg1);
-			vg1 = vg0;
-			vg0 = v.vg;
+			v.vg = secantf12(v, &vg0, &vg1);
 
 			v.vk = vk0 - f10(v,vk0)*(vk0-vk1)/(f10(v,vk0)-f10(v,vk1));
 			vk1 = vk0;
@@ -422,7 +415,7 @@ Start:
 		}
 
 Done:
-*/
+
 		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
 		
 //		printf("g:%f k:%f p:%f\n",v.vg,v.vk,v.vp);
@@ -436,13 +429,8 @@ Done:
 		P1.setWD(v.bk);
 		P2.setWD(v.bp);
 
-		//Step 5: remember the old voltages for next time
-		//v.vg = (I1.WD+I1.WU)/2.0;
-		//v.vk = (P1.WD+P1.WU)/2.0;
-		//v.vp = (P2.WD+P2.WU)/2.0;
-
-		//Step 6: measure the voltage across the output load resistance and set the sample
-		output[j] = Ro.Voltage()/gain;
+		//Step 5: measure the voltage across the output load resistance and set the sample
+		output[j] = Ro.Voltage();
 		printf("%f %f %f\n", j/Fs, input[j], output[j]);
 	}
 }
