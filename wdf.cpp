@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <cmath>
 
 #define ONEPORT 0
@@ -26,6 +27,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define max(x,y) (( (x) > (y) ) ? x : y )
 
 typedef double T;
+
+// Works on little-endian machines only
+inline bool is_nan(T& value ) {
+	if (((*(uint32_t *) &value) & 0x7fffffff) > 0x7f800000) {
+		return true;
+	}
+	return false;
+}
+
+inline void sanitize_denormal(T& value) {
+	if (is_nan(value)) {
+		value = 0.0;
+	}
+}
 
 typedef struct valve {
 	T r0g; T ag; T bg; T vg;
@@ -37,7 +52,7 @@ typedef struct valve {
 T alpha(Valve v, T vk) {
 	T vgk = v.vg - vk;
 	T G = max(v.Gmin, v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk);
-	return (powf(fabs((vk-v.ak)/(v.r0k*G)),2.0/3.0));
+	return (powf(fabs((vk-v.ak)/(v.r0k*G)*(vk-v.ak)/(v.r0k*G)),1.0/3.0));
 }
 
 T h(Valve v, T vk) {
@@ -51,11 +66,13 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	return (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*((v.ak-v.vk)/(v.ag-vg)+1.0))),1.0/v.K));
+	if (v.ag == vg) return 0.0;
+	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
+	return x;
 }
 
 T f8(Valve v, T vkn) {
-	return ((v.r0k*(v.ap+mu(v,vkn)*(v.vg+h(v,vkn)-alpha(v,vkn))+v.r0p*v.ak)/(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-(v.r0k*v.r0p*(v.vg-v.ag))/(v.r0g*(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-vkn);
+	return ((v.r0k*(v.ap+mu(v,vkn)*(v.vg+h(v,vkn)-alpha(v,vkn))+v.r0p*v.ak)/(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-(v.r0k*v.r0p*(v.vg-v.ag+v.voff))/(v.r0g*(v.r0p+(mu(v,vkn)+1.0)*v.r0k))-vkn);
 }
 
 T f10(Valve v, T vkn) {
@@ -67,12 +84,12 @@ T f12(Valve v, T vgn) {
 }
 
 T secantf8(Valve v, T *i1, T *i2) {
-	T tolerance = 1e-6;
+	T tolerance = 1e-9;
 	T vkn = 0.0;
-	for (int i = 0; i < 15; ++i) {
+	for (int i = 0; i < 9; ++i) {
 		vkn = *i1 - f8(v,*i1)*(*i1-*i2)/(f8(v,*i1)-f8(v,*i2));
-		*i2 = *i1;
-		*i1 = vkn;
+		*i1 = *i2;
+		*i2 = vkn;
 		if (fabs(f8(v,vkn)) < tolerance) break;
 	} 
 	//printf("%f\n",vkn);
@@ -80,24 +97,24 @@ T secantf8(Valve v, T *i1, T *i2) {
 }
 
 T secantf10(Valve v, T *i1, T *i2) {
-	T tolerance = 1e-6;
+	T tolerance = 1e-9;
 	T vkn = 0.0;
- 	for (int i = 0; i<15; ++i) {
+ 	for (int i = 0; i<9; ++i) {
 		vkn = *i1 - f10(v,*i1)*(*i1-*i2)/(f10(v,*i1)-f10(v,*i2));
-		*i2 = *i1;
-		*i1 = vkn;
+		*i1 = *i2;
+		*i2 = vkn;
 		if (fabs(f10(v,vkn)) < tolerance) break;
 	}
 	return vkn;
 }
 
 T secantf12(Valve v, T *i1, T *i2) {
-	T tolerance = 1e-6;
+	T tolerance = 1e-9;
 	T vgn = 0.0;
- 	for (int i = 0; i<15; ++i) {
+ 	for (int i = 0; i<9; ++i) {
 		vgn = *i1 - f12(v,*i1)*(*i1-*i2)/(f12(v,*i1)-f12(v,*i2));
-		*i2 = *i1;
-		*i1 = vgn;
+		*i1 = *i2;
+		*i2 = vgn;
 		if (fabs(f12(v,vgn)) < tolerance) break;
 	}
 	return vgn;
@@ -111,6 +128,7 @@ public:
 	T PortRes;
 	WDF();
 	T Voltage();
+	T Current();
 	T state;
 	virtual T waveUp() = 0;
 	virtual void setWD(T waveparent) = 0;
@@ -172,13 +190,18 @@ WDF::WDF() {}
 
 void OnePort::setWD(T val) {
 	WD = val;
-	WDF::WD = val;
+//	WDF::WD = val;
 	state = val;
 }
 
 T WDF::Voltage() {
 	T Volts = (WU + WD) / 2.0;
 	return Volts;
+}
+
+T WDF::Current() {
+	T Amps = (WU - WD) / (2.0*PortRes);
+	return Amps;
 }
 
 template <class Port1, class Port2>ser::ser(Port1 *l, Port2 *r) : Adaptor(THREEPORT) {
@@ -212,6 +235,8 @@ T par::waveUp() {
 }
 
 Adaptor::Adaptor(int flag) {
+	WU = 0.0;
+	WD = 0.0;
 	switch (flag) {
 		case ONEPORT:
 			left = NULL;
@@ -246,8 +271,8 @@ T inv::waveUp() {
 }
 
 void inv::setWD(T waveparent) {
-	//Adaptor::setWD(-waveparent);
-	WD = -waveparent;		//-
+	Adaptor::setWD(waveparent);
+	//WDF::WD = waveparent;		//-
 	left->WD = -waveparent;		//-
 	left->setWD(-waveparent);	//-
 	
@@ -286,8 +311,8 @@ T V::waveUp() {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs;
-	T gain = 40.5;
+	int N = Fs*2;
+	T gain = 2.5;
 	T f0 =1200.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -298,16 +323,16 @@ int main(){
 
 	//Model
 	T ci = 100e-9;
-	T ck = 10e-8;
+	T ck = 10e-6;
 	T co = 10e-9;
 	T ro = 1e6;
 	T rp = 100e3;
 	T rg = 20e3;
 	T ri = 1e6;
 	T rk = 1e3; //from paper
-	T e = 250;
+	T e = 250.0;
 
-	V Vi = V(0.0,1000000.0);
+	V Vi = V(0.0,1e4);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -382,34 +407,26 @@ int main(){
 		int cnt = 0;
 		v.vg = v.ag;
 
+		vk0 = v.ak;
+		vk1 = v.ak + f10(v, v.ak);
+		v.vk = secantf10(v, &vk0, &vk1);
+		
 		if (v.vg - v.vk <= v.voff) {
-			vk0 = v.ak;
-			vk1 = v.ak + f10(v, v.ak);
-			v.vk = secantf10(v, &vk0, &vk1);
-			//printf("vgk=%f f10()=%f\n",v.vg-v.vk,f10(v,v.vk));
-
+			goto Done;
  		} else {
-			vk0 = v.ak;
-			vk1 = v.ak + f10(v, v.ak);
-			v.vk = secantf10(v, &vk0, &vk1);
 			
+			//initial guess for vg
 			vg0 = v.ag;
-			vg1 = v.ag + f12(v,v.ag);
-			
-			
-
-Start:
+			vg1 = v.ag + f12(v,v.ag+0.0001);
+			v.vg = secantf12(v, &vg0, &vg1);
 			v.vk = secantf8(v, &vk0, &vk1);
-			
+Start:
 			if (v.vg - v.vk <= v.voff) goto Done;
 			
 			v.vg = secantf12(v, &vg0, &vg1);
+			v.vk = secantf8(v, &vk0, &vk1);
 
-			v.vk = vk0 - f10(v,vk0)*(vk0-vk1)/(f10(v,vk0)-f10(v,vk1));
-			vk1 = vk0;
-			vk0 = v.vk;
-
-			if (++cnt>50 || fabs(f10(v, v.vk))<tol) goto Done;
+			if (++cnt > 2) goto Done;
 			
 			goto Start;
 		}
@@ -417,6 +434,9 @@ Start:
 Done:
 
 		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
+		//sanitize_denormal(v.vg);
+		//sanitize_denormal(v.vk);
+		//sanitize_denormal(v.vp);
 		
 //		printf("g:%f k:%f p:%f\n",v.vg,v.vk,v.vp);
 
