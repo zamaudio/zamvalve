@@ -48,7 +48,7 @@ typedef struct valve {
 T alpha(Valve v, T vk) {
 	T vgk = v.vg - vk;
 	T G = max(v.Gmin, v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk);
-	return (powf(fabs((vk-v.ak)/(v.r0k*G)*(vk-v.ak)/(v.r0k*G)),1.0/3.0));
+	return (powf(((vk-v.ak)/(v.r0k*G)*(vk-v.ak)/(v.r0k*G)),1.0/3.0));
 }
 
 T h(Valve v, T vk) {
@@ -62,8 +62,11 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	if (v.ag == vg) return 0.0;
+	if (v.ag == vg)
+		vg = v.ag + v.voff;
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
+	if (v.ag == vg || v.ak == v.vk) 
+		x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
 	return x;
 }
 
@@ -119,7 +122,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs*2;
-	T gain = 2.5;
+	T gain = 12.5;
 	T f0 = 1200.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -130,7 +133,7 @@ int main(){
 
 	//Model
 	T ci = 100e-9;
-	T ck = 10e-6;
+	T ck = 10e-7;
 	T co = 10e-9;
 	T ro = 1e6;
 	T rp = 100e3;
@@ -217,14 +220,14 @@ int main(){
 		vk0 = v.ak;
 		vk1 = v.ak + f10(v, v.ak);
 		v.vk = secantf10(v, &vk0, &vk1);
-		
+/*	
 		if (v.vg - v.vk <= v.voff) {
 			goto Done;
  		} else {
 			
 			//initial guess for vg
 			vg0 = v.ag;
-			vg1 = v.ag + f12(v,v.ag+0.0001);
+			vg1 = v.ag + f12(v,v.ag-0.001);
 			v.vg = secantf12(v, &vg0, &vg1);
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
@@ -233,13 +236,13 @@ Start:
 			v.vg = secantf12(v, &vg0, &vg1);
 			v.vk = secantf8(v, &vk0, &vk1);
 
-			if (++cnt > 2) goto Done;
+			if (++cnt > 4) goto Done;
 			
 			goto Start;
 		}
 
 Done:
-
+*/
 		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
 		//sanitize_denormal(v.vg);
 		//sanitize_denormal(v.vk);

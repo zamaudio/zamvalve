@@ -4,3 +4,5 @@ all:
 test:
 	g++ -g test.cpp -o test -lm
 
+clean:
+	rm x test wdf
