@@ -196,10 +196,9 @@ T inv::waveUp() {
 }
 
 void inv::setWD(T waveparent) {
-	//WDF::setWD(waveparent);
+	WDF::setWD(waveparent);
 	DUMP(printf("INV WP=%f\n",waveparent));
 	//left->WD = -waveparent;		//-
-	WD = waveparent;
 	left->setWD(-waveparent);	//-
 	left->WU = -WU;
 	

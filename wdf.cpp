@@ -123,7 +123,7 @@ int main(){
 	T Fs = 48000.0;
 	int N = Fs*2;
 	T gain = 4.0;
-	T f0 = 1200.0;
+	T f0 = 2200.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
 	int i;
