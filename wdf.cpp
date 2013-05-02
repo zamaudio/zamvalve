@@ -65,8 +65,8 @@ T beta(Valve v, T vg) {
 	if (v.ag == vg)
 		vg = v.ag + v.voff;
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
-	if (v.ag == vg || v.ak == v.vk) 
-		x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
+	//if (v.ag == vg || v.ak == v.vk) 
+	//	x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
 	return x;
 }
 
@@ -123,7 +123,7 @@ int main(){
 	T Fs = 48000.0;
 	int N = Fs*2;
 	T gain = 4.0;
-	T f0 = 2200.0;
+	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
 	int i;
@@ -151,7 +151,7 @@ int main(){
 	R Ri = R(ri);
 	R Rk = R(rk);
 	V E = V(e, rp);
-	
+#if 0
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
 	par P0 = par(&I0, &Ri);
@@ -163,8 +163,8 @@ int main(){
 	ser S2 = ser(&Co, &Ro);
 	inv I2 = inv(&S2);
 	par P2 = par(&I2, &E);
+#else
 
-/*
 	ser S0 = ser(&Ci, &Vi);
 	par P0 = par(&S0, &Ri);
 	ser I1 = ser(&Rg, &P0);
@@ -173,7 +173,7 @@ int main(){
 
 	ser S2 = ser(&Co, &Ro);
 	par P2 = par(&S2, &E);
-*/	
+#endif	
 
 	Valve v;
 	v.D = 0.12;
@@ -204,7 +204,7 @@ int main(){
 		v.vk = 0.0;
 		v.vg = 0.0;
 		v.vp = 0.0;
-		v.ag = -I1.WU;
+		v.ag = I1.WU;
 		v.ak = P1.WU;
 		v.ap = P2.WU;
 		v.r0g = I1.PortRes;
@@ -220,7 +220,7 @@ int main(){
 		vk0 = v.ak;
 		vk1 = v.ak + f10(v, v.ak);
 		v.vk = secantf10(v, &vk0, &vk1);
-/*	
+#if 0	
 		if (v.vg - v.vk <= v.voff) {
 			goto Done;
  		} else {
@@ -242,8 +242,8 @@ Start:
 		}
 
 Done:
-*/
-		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
+#endif
+		v.vp = (v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
 		//v.vp = v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk));
 		//sanitize_denormal(v.vg);
 		//sanitize_denormal(v.vk);
