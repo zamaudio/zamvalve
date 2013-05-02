@@ -122,7 +122,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs*2;
-	T gain = 12.5;
+	T gain = 4.0;
 	T f0 = 1200.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -133,7 +133,7 @@ int main(){
 
 	//Model
 	T ci = 100e-9;
-	T ck = 10e-7;
+	T ck = 10e-6;
 	T co = 10e-9;
 	T ro = 1e6;
 	T rp = 100e3;
@@ -204,7 +204,7 @@ int main(){
 		v.vk = 0.0;
 		v.vg = 0.0;
 		v.vp = 0.0;
-		v.ag = I1.WU;
+		v.ag = -I1.WU;
 		v.ak = P1.WU;
 		v.ap = P2.WU;
 		v.r0g = I1.PortRes;
@@ -244,20 +244,21 @@ Start:
 Done:
 */
 		v.vp = v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
+		//v.vp = v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk));
 		//sanitize_denormal(v.vg);
 		//sanitize_denormal(v.vk);
 		//sanitize_denormal(v.vp);
 		
-//		printf("g:%f k:%f p:%f\n",v.vg,v.vk,v.vp);
+		DUMP(printf("vg=%f vk=%f vp=%f\nag=%f ak=%f ap=%f\n",v.vg,v.vk,v.vp,v.ag,v.ak,v.ap));
 
 		v.bg = 2.0*v.vg - v.ag;
 		v.bk = 2.0*v.vk - v.ak;
 		v.bp = 2.0*v.vp - v.ap;
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		I1.setWD(v.bg);
+		I1.setWD(-v.bg);
 		P1.setWD(v.bk);
-		P2.setWD(v.bp);
+		P2.setWD(-v.bp);
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
