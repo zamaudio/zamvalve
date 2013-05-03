@@ -124,7 +124,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs;
-	T gain = 1.0;
+	T gain = 5.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -194,6 +194,10 @@ int main(){
 	v.G2 = -31.56e-6;
 	v.G3 = -3.286e-6;
 
+	v.vk = 0.0;
+	v.vg = 0.0;
+	v.vp = 0.0;
+	
 	for (int j = 0; j < N; ++j) {
 		//Step 1: read input sample as voltage for the source
 		Vi.e = input[j];
@@ -204,12 +208,9 @@ int main(){
 		P2.waveUp();
 
 		//Step 3: compute wave reflections at non-linearity
-		v.vk = 0.0;
-		v.vg = 0.0;
-		v.vp = 0.0;
-		v.ag = -I1.WU;		//-
+		v.ag = I1.WU;		//-
 		v.ak = I3.WU;		//+
-		v.ap = -P2.WD;		//-
+		v.ap = P2.WU;		//-
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -218,18 +219,18 @@ int main(){
 
 		T tol = 1e-4;
 		int cnt = 0;
-		v.vg = -I1.Voltage();
+		//v.vg = -I1.Voltage();	//-
 
-		vk0 = I3.Voltage();
+		vk0 = I3.Voltage();	//+
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 0	
+#if 1	
 		if (v.vg - v.vk <= v.voff) {
 			goto Done;
  		} else {
 			
 			//initial guess for vg
-			vg0 = v.vg;
+			vg0 = I1.Voltage();
 			vg1 = vg0 + f12(v,vg0+0.001);
 			v.vg = secantf12(v, &vg0, &vg1);
 			v.vk = secantf8(v, &vk0, &vk1);
@@ -246,8 +247,8 @@ Start:
 
 Done:
 #endif
-		v.vp = (v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
-		//v.vp = (v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk)));
+		//v.vp = (v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
+		v.vp = (v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk)));
 		//sanitize_denormal(v.vg);
 		//sanitize_denormal(v.vk);
 		//sanitize_denormal(v.vp);
@@ -259,19 +260,20 @@ Done:
 		v.bp = 2.0*v.vp - v.ap;
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		//I1.WU = -v.ag; //-
-		//I3.WU = -v.ak;
-		//P2.WU = -v.ap;
-		I1.setWD(-v.bg);	//-
+		I1.setWD(v.bg);	//-
 		DUMP(printf("\n"));
-		I3.setWD(-v.bk);	//-
+		I3.setWD(v.bk);	//-
 		DUMP(printf("\n"));
 		P2.setWD(v.bp);		//+
 		DUMP(printf("\n"));
+		
+		v.vg = I1.Voltage(); 
+		v.vk = I3.Voltage();
+		v.vp = P2.Voltage();
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
-		printf("%f %f %f %f %f %f %f\n", j/Fs, input[j], Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage(), I1.Current());
+		printf("%f %f %f %f %f %f\n", j/Fs, input[j], Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage());
 	}
 }
 
