@@ -65,8 +65,8 @@ T beta(Valve v, T vg) {
 	if (v.ag == vg)
 		vg = v.ag + v.voff;
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
-	//if (v.ag == vg || v.ak == v.vk) 
-	//	x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
+	if (v.ag == vg || v.ak == v.vk) 
+		x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
 	return x;
 }
 
@@ -142,7 +142,7 @@ int main(){
 	T rk = 1e3; //from paper
 	T e = 250.0;
 
-	V Vi = V(0.0,1e4);
+	V Vi = V(0.0,1e3);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -151,15 +151,16 @@ int main(){
 	R Ri = R(ri);
 	R Rk = R(rk);
 	V E = V(e, rp);
-#if 0
+#if 1
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
 	par P0 = par(&I0, &Ri);
 	ser S1 = ser(&Rg, &P0);
 	inv I1 = inv(&S1);
 
-	par P1 = par(&Ck, &Rk);
-
+	par I3 = par(&Ck, &Rk);
+//	inv I3 = inv(&P1);
+	
 	ser S2 = ser(&Co, &Ro);
 	inv I2 = inv(&S2);
 	par P2 = par(&I2, &E);
@@ -169,7 +170,7 @@ int main(){
 	par P0 = par(&S0, &Ri);
 	ser I1 = ser(&Rg, &P0);
 
-	par P1 = par(&Ck, &Rk);
+	par I3 = par(&Ck, &Rk);
 
 	ser S2 = ser(&Co, &Ro);
 	par P2 = par(&S2, &E);
@@ -197,18 +198,18 @@ int main(){
 
 		//Step 2: propagate waves up to the 3 roots
 		I1.waveUp();
-		P1.waveUp();
+		I3.waveUp();
 		P2.waveUp();
 
 		//Step 3: compute wave reflections at non-linearity
 		v.vk = 0.0;
 		v.vg = 0.0;
 		v.vp = 0.0;
-		v.ag = I1.WU;
-		v.ak = P1.WU;
-		v.ap = P2.WU;
+		v.ag = -I1.WU;		//-
+		v.ak = I3.WU;		//+
+		v.ap = P2.WU;		//+
 		v.r0g = I1.PortRes;
-		v.r0k = P1.PortRes;
+		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
 
 		T vg0, vg1, vk0, vk1;
@@ -244,7 +245,7 @@ Start:
 Done:
 #endif
 		v.vp = (v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
-		//v.vp = v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk));
+		//v.vp = (v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk)));
 		//sanitize_denormal(v.vg);
 		//sanitize_denormal(v.vk);
 		//sanitize_denormal(v.vp);
@@ -256,9 +257,15 @@ Done:
 		v.bp = 2.0*v.vp - v.ap;
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		I1.setWD(-v.bg);
-		P1.setWD(v.bk);
-		P2.setWD(-v.bp);
+		//I1.WU = -v.ag; //-
+		//I3.WU = -v.ak;
+		//P2.WU = -v.ap;
+		I1.setWD(-v.bg);	//-
+		DUMP(printf("\n"));
+		I3.setWD(v.bk);		//+
+		DUMP(printf("\n"));
+		P2.setWD(-v.bp);	//-
+		DUMP(printf("\n"));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();

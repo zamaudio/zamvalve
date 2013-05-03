@@ -101,13 +101,13 @@ WDF::WDF() {}
 void WDF::setWD(T val) {
 	WD = val;
 	state = val;
-	DUMP(printf("DOWN\tWDF\t%c\tWD=%f\tWU=%f\n",type,WD,WU));	
+	DUMP(printf("DOWN\tWDF\t%c\tWD=%f\tWU=%f\tV=%f\n",type,WD,WU,(WD+WU)/2.0));	
 }
 
 void OnePort::setWD(T val) {
 	WD = val;
 	state = val;
-	DUMP(printf("DOWN\tOneport\t%c\tWD=%f\tWU=%f\n",type,WD,WU));	
+	DUMP(printf("DOWN\tOneport\t%c\tWD=%f\tWU=%f\tV=%f\n",type,WD,WU,(WD+WU)/2.0));	
 }
 
 T WDF::Voltage() {
@@ -136,7 +136,7 @@ template <class Port>inv::inv(Port *l) : Adaptor(PASSTHROUGH) {
 T ser::waveUp() {
 	//Adaptor::WU = -left->waveUp() - right->waveUp();
 	WDF::WU = -left->waveUp() - right->waveUp();
-	DUMP(printf("UP\tser\tWU=%f\tWD=%f\n",WU,WD));
+	DUMP(printf("UP\tser\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
 	return WU;
 }
 
@@ -151,7 +151,7 @@ T par::waveUp() {
 	T G23 = 1.0 / left->PortRes + 1.0 / right->PortRes;
 	//Adaptor::WU = (1.0 / left->PortRes)/G23*left->waveUp() + (1.0 / right->PortRes)/G23*right->waveUp();
 	WDF::WU = (1.0 / left->PortRes)/G23*left->waveUp() + (1.0 / right->PortRes)/G23*right->waveUp();
-	DUMP(printf("UP\tpar\tWU=%f\tWD=%f\n",WU,WD));
+	DUMP(printf("UP\tpar\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
 	return WU;
 }
 
@@ -174,7 +174,7 @@ Adaptor::Adaptor(int flag) {
 
 void ser::setWD(T waveparent) {
 	Adaptor::setWD(waveparent);
-	DUMP(printf("SER WP=%f WD=%f\n",waveparent,WD));
+	DUMP(printf("SER WP=%f\n",waveparent));
 	left->setWD(left->WU-(2.0*left->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
 	right->setWD(right->WU-(2.0*right->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
 }
@@ -191,7 +191,7 @@ void par::setWD(T waveparent) {
 T inv::waveUp() {
 	WD = -left->WD;
 	WU = -left->waveUp(); 	//-
-	DUMP(printf("UP\tinv\tWU=%f\tWD=%f\n",WU,WD));
+	DUMP(printf("UP\tinv\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
 	return WU;
 }
 
@@ -199,8 +199,8 @@ void inv::setWD(T waveparent) {
 	WDF::setWD(waveparent);
 	DUMP(printf("INV WP=%f\n",waveparent));
 	//left->WD = -waveparent;		//-
-	left->setWD(-waveparent);	//-
 	left->WU = -WU;
+	left->setWD(-waveparent);	//-
 	
 }
 
@@ -211,7 +211,7 @@ R::R(T res) : Adaptor(ONEPORT) {
 
 T R::waveUp() {
 	WU = 0.0;
-	DUMP(printf("UP\tR\tWU=%f\tWD=%f\n",WU, WD));
+	DUMP(printf("UP\tR\tWU=%f\tWD=%f\tV=%f\n",WU, WD,(WD+WU)/2.0));
 	return WU;
 }
 
@@ -223,7 +223,7 @@ C::C(T c, T fs) : Adaptor(ONEPORT) {
 
 T C::waveUp() {
 	WU = state;
-	DUMP(printf("UP\tC\tWU=%f\tWD=%f\n",WU,WD));
+	DUMP(printf("UP\tC\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
 	return WU;
 }
 
@@ -236,7 +236,7 @@ V::V(T ee, T r) : Adaptor(ONEPORT) {
 
 T V::waveUp() {
 	WU = 2.0*e - WD;
-	DUMP(printf("UP\tV\tWU=%f\tWD=%f\n",WU, WD));
+	DUMP(printf("UP\tV\tWU=%f\tWD=%f\tV=%f\n",WU, WD,(WD+WU)/2.0));
 	return WU;
 }
 
