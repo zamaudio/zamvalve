@@ -124,7 +124,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs;
-	T gain = 1.0;
+	T gain = 4.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -209,7 +209,7 @@ int main(){
 		v.vp = 0.0;
 		v.ag = -I1.WU;		//-
 		v.ak = -I3.WU;		//+
-		v.ap = -P2.WU;		//+
+		v.ap = P2.WU;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -270,7 +270,7 @@ Done:
 		DUMP(printf("\n"));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
-		output[j] = -Ro.Voltage();
+		output[j] = Ro.Voltage();
 		printf("%f %f %f\n", j/Fs, input[j], output[j]);
 	}
 }
