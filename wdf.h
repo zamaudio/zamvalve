@@ -189,7 +189,7 @@ void par::setWD(T waveparent) {
 }
 
 T inv::waveUp() {
-	WD = -left->WD;
+	///////////WD = -left->WD;
 	WU = -left->waveUp(); 	//-
 	DUMP(printf("UP\tinv\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
 	return WU;
@@ -199,7 +199,7 @@ void inv::setWD(T waveparent) {
 	WDF::setWD(waveparent);
 	DUMP(printf("INV WP=%f\n",waveparent));
 	//left->WD = -waveparent;		//-
-	left->WU = -WU;
+	///////////left->WU = -WU;
 	left->setWD(-waveparent);	//-
 	
 }

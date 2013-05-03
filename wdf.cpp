@@ -47,8 +47,8 @@ typedef struct valve {
 
 T alpha(Valve v, T vk) {
 	T vgk = (v.vg - vk);
-	//T G = max(v.Gmin, (v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk));
-	T G = v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk;
+	T G = max(v.Gmin, (v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk));
+	//T G = v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk;
 	return (powf(((vk-v.ak)/(v.r0k*G)*(vk-v.ak)/(v.r0k*G)),1.0/3.0));
 }
 
@@ -59,8 +59,8 @@ T h(Valve v, T vk) {
 
 T mu(Valve v, T vk) {
 	T vgk = (v.vg - vk);
-	//return (max(v.mumin, (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk)));
-	return (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk);
+	return (max(v.mumin, (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk)));
+	//return (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk);
 }
 
 T beta(Valve v, T vg) {
@@ -124,7 +124,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs;
-	T gain = 4.0;
+	T gain = 1.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -208,8 +208,8 @@ int main(){
 		v.vg = 0.0;
 		v.vp = 0.0;
 		v.ag = -I1.WU;		//-
-		v.ak = -I3.WU;		//+
-		v.ap = P2.WU;		//+
+		v.ak = I3.WU;		//+
+		v.ap = -P2.WD;		//-
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -220,10 +220,10 @@ int main(){
 		int cnt = 0;
 		v.vg = -I1.Voltage();
 
-		vk0 = -I3.Voltage();
+		vk0 = I3.Voltage();
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 1	
+#if 0	
 		if (v.vg - v.vk <= v.voff) {
 			goto Done;
  		} else {
@@ -264,14 +264,14 @@ Done:
 		//P2.WU = -v.ap;
 		I1.setWD(-v.bg);	//-
 		DUMP(printf("\n"));
-		I3.setWD(-v.bk);		//+
+		I3.setWD(-v.bk);	//-
 		DUMP(printf("\n"));
-		P2.setWD(-v.bp);	//-
+		P2.setWD(v.bp);		//+
 		DUMP(printf("\n"));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
-		printf("%f %f %f %f %f %f\n", j/Fs, input[j], Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage());
+		printf("%f %f %f %f %f %f %f\n", j/Fs, input[j], Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage(), I1.Current());
 	}
 }
 
