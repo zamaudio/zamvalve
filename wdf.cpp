@@ -46,8 +46,9 @@ typedef struct valve {
 } Valve;
 
 T alpha(Valve v, T vk) {
-	T vgk = v.vg - vk;
-	T G = max(v.Gmin, v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk);
+	T vgk = (v.vg - vk);
+	T G = max(v.Gmin, (v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk));
+	//T G = v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk;
 	return (powf(((vk-v.ak)/(v.r0k*G)*(vk-v.ak)/(v.r0k*G)),1.0/3.0));
 }
 
@@ -57,16 +58,17 @@ T h(Valve v, T vk) {
 }
 
 T mu(Valve v, T vk) {
-	T vgk = v.vg - vk;
-	return (max(v.mumin, v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk));
+	T vgk = (v.vg - vk);
+	return (max(v.mumin, (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk)));
+	//return (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk);
 }
 
 T beta(Valve v, T vg) {
 	if (v.ag == vg)
 		vg = v.ag + v.voff;
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
-	if (v.ag == vg || v.ak == v.vk) 
-		x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
+	//if (v.ag == vg || v.ak == v.vk) 
+	//	x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
 	return x;
 }
 
@@ -121,8 +123,8 @@ T secantf12(Valve v, T *i1, T *i2) {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs*2;
-	T gain = 4.0;
+	int N = Fs;
+	T gain = 1.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -206,8 +208,8 @@ int main(){
 		v.vg = 0.0;
 		v.vp = 0.0;
 		v.ag = -I1.WU;		//-
-		v.ak = I3.WU;		//+
-		v.ap = P2.WU;		//+
+		v.ak = -I3.WU;		//+
+		v.ap = -P2.WU;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -216,10 +218,10 @@ int main(){
 
 		T tol = 1e-4;
 		int cnt = 0;
-		v.vg = v.ag;
+		v.vg = -I1.Voltage();
 
-		vk0 = v.ak;
-		vk1 = v.ak + f10(v, v.ak);
+		vk0 = -I3.Voltage();
+		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
 #if 0	
 		if (v.vg - v.vk <= v.voff) {
@@ -228,7 +230,7 @@ int main(){
 			
 			//initial guess for vg
 			vg0 = v.ag;
-			vg1 = v.ag + f12(v,v.ag-0.001);
+			vg1 = v.ag + f12(v,v.ag+0.001);
 			v.vg = secantf12(v, &vg0, &vg1);
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
@@ -262,13 +264,13 @@ Done:
 		//P2.WU = -v.ap;
 		I1.setWD(-v.bg);	//-
 		DUMP(printf("\n"));
-		I3.setWD(v.bk);		//+
+		I3.setWD(-v.bk);		//+
 		DUMP(printf("\n"));
 		P2.setWD(-v.bp);	//-
 		DUMP(printf("\n"));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
-		output[j] = Ro.Voltage();
+		output[j] = -Ro.Voltage();
 		printf("%f %f %f\n", j/Fs, input[j], output[j]);
 	}
 }
