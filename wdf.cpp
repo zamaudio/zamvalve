@@ -47,8 +47,8 @@ typedef struct valve {
 
 T alpha(Valve v, T vk) {
 	T vgk = (v.vg - vk);
-	T G = max(v.Gmin, (v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk));
-	//T G = v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk;
+	//T G = max(v.Gmin, (v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk));
+	T G = v.G0 + v.G1*vgk + v.G2*vgk*vgk + v.G3*vgk*vgk*vgk;
 	return (powf(((vk-v.ak)/(v.r0k*G)*(vk-v.ak)/(v.r0k*G)),1.0/3.0));
 }
 
@@ -59,8 +59,8 @@ T h(Valve v, T vk) {
 
 T mu(Valve v, T vk) {
 	T vgk = (v.vg - vk);
-	return (max(v.mumin, (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk)));
-	//return (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk);
+	//return (max(v.mumin, (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk)));
+	return (v.mu0 + v.mu1*vgk + v.mu2*vgk*vgk + v.mu3*vgk*vgk*vgk);
 }
 
 T beta(Valve v, T vg) {
@@ -223,14 +223,14 @@ int main(){
 		vk0 = -I3.Voltage();
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 0	
+#if 1	
 		if (v.vg - v.vk <= v.voff) {
 			goto Done;
  		} else {
 			
 			//initial guess for vg
-			vg0 = v.ag;
-			vg1 = v.ag + f12(v,v.ag+0.001);
+			vg0 = v.vg;
+			vg1 = vg0 + f12(v,vg0+0.001);
 			v.vg = secantf12(v, &vg0, &vg1);
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
@@ -271,7 +271,7 @@ Done:
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
-		printf("%f %f %f\n", j/Fs, input[j], output[j]);
+		printf("%f %f %f %f %f %f\n", j/Fs, input[j], Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage());
 	}
 }
 
