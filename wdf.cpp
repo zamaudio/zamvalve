@@ -217,10 +217,10 @@ int main(){
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = I1.WU;		//-
 		v.ak = -I3.WU;		//-
-		v.ap = P2.WU;		//+
+		v.ap = -P2.WU;		//+
 		I1.WU = v.ag;		//-
 		I3.WU = -v.ak;		//-
-		P2.WU = v.ap;		//+
+		P2.WU = -v.ap;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -273,7 +273,7 @@ Done:
 		DUMP(printf("\n"));
 		
 		
-		v.vp = v.ap - v.r0p*((v.vg - v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
+		v.vp = (v.ap - v.r0p*((v.vg - v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
 		
 		//v.vp = v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk));
 		//v.vp = v.vk + (v.vg - v.vk - v.voff)*beta(v,v.vg);
@@ -283,7 +283,7 @@ Done:
 		v.bp = (2.0*v.vp - v.ap);
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		P2.setWD(-v.bp);		//-
+		P2.setWD(v.bp);		//-
 		DUMP(printf("\n"));
 		
 		//v.vg = I1.Voltage(); 
