@@ -157,7 +157,8 @@ int main(){
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
 	par P0 = par(&I0, &Ri);
-	ser I1 = ser(&Rg, &P0);
+	inv I4 = inv(&P0);
+	ser I1 = ser(&Rg, &I4);
 	//inv I1 = inv(&S1);
 
 	par P1 = par(&Ck, &Rk);
@@ -211,13 +212,13 @@ int main(){
 		I3.waveUp();
 		P2.waveUp();
 		
-		v.vg = -I1.WU + v.voff; //IMPORTANT!!
+		v.vg = -(-I1.WU + v.voff); //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
-		v.ag = -I1.WU;		//-
+		v.ag = I1.WU;		//-
 		v.ak = -I3.WU;		//-
 		v.ap = P2.WU;		//+
-		I1.WU = -v.ag;		//-
+		I1.WU = v.ag;		//-
 		I3.WU = -v.ak;		//-
 		P2.WU = v.ap;		//+
 		v.r0g = I1.PortRes;
@@ -266,7 +267,7 @@ Done:
 		*/
 		v.bg = (2.0*v.vg - v.ag);
 		v.bk = (2.0*v.vk - v.ak);
-		I1.setWD(-v.bg);
+		I1.setWD(v.bg);
 		DUMP(printf("\n"));
 		I3.setWD(-v.bk);
 		DUMP(printf("\n"));
@@ -291,7 +292,7 @@ Done:
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
-		printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage(),Rg.Current(),P2.Voltage());
+		printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Voltage());
 	}
 }
 
