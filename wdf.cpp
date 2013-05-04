@@ -157,8 +157,7 @@ int main(){
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
 	par P0 = par(&I0, &Ri);
-	inv I4 = inv(&P0);
-	ser S1 = ser(&Rg, &I4);
+	ser S1 = ser(&Rg, &P0);
 	inv I1 = inv(&S1);
 
 	par P1 = par(&Ck, &Rk);
@@ -182,7 +181,7 @@ int main(){
 	Valve v;
 	v.D = 0.12;
 	v.K = 1.1;
-	v.voff = -0.2;
+	v.voff = -0.05;
 	v.mumin = 1e-9;
 	v.mu0 = 99.705;
 	v.mu1 = -22.98e-3;
@@ -212,18 +211,15 @@ int main(){
 		I3.waveUp();
 		P2.waveUp();
 		
-		v.vg = -I1.WU; //IMPORTANT!!
+		v.vg = -I1.WU - v.voff; //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = -I1.WU;		//-
-		v.ak = -I3.WU;		//+
-		v.ap = P2.WU;		//-
+		v.ak = -I3.WU;		//-
+		v.ap = P2.WU;		//+
 		I1.WU = -v.ag;		//-
-		I3.WU = -v.ak;		//+
-		P2.WU = -v.ap;		//-
-		//I1.WU = v.ag;		//-
-		//I3.WU = v.ak;		//+
-		//P2.WU = v.ap;		//-
+		I3.WU = -v.ak;		//-
+		P2.WU = v.ap;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -238,7 +234,7 @@ int main(){
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
 #if 1	
-		if (v.vg - v.vk <= v.voff) {
+		if (v.vg - v.vk <= v.voff+0.01) {
 			goto Done;
  		} else {
 			
@@ -246,47 +242,56 @@ int main(){
 			//vg0 = -I1.Voltage();
 			vg0 = v.vg;
 			vg1 = vg0 + f12(v,vg0);
-			v.vg = secantf12(v, &vg0, &vg1);
+			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
-			if (v.vg - v.vk <= v.voff) goto Done;
+			if (v.vg - v.vk <= v.voff+0.01) goto Done;
 			
-			v.vg = secantf12(v, &vg0, &vg1);
+			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 
-			if (++cnt > 4) goto Done;
+			if (++cnt > 3) goto Done;
 			
 			goto Start;
 		}
 
 Done:
 #endif
-		v.bg = (2.0*v.vg - v.ag); //v.ag;
+		 
+		/*
+		if (v.vg < -e) v.vg = -e;
+		if (v.vg > e) v.vg = e;
+		if (v.vk < -e) v.vk = -e;
+		if (v.vk > e) v.vk = e;
+		*/
+		v.bg = (2.0*v.vg - v.ag);
 		v.bk = (2.0*v.vk - v.ak);
-		I1.setWD(-v.bg);	//-
+		I1.setWD(-v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(-v.bk);	//-
+		I3.setWD(-v.bk);
 		DUMP(printf("\n"));
 		
 		
-		v.vp = (v.ap - v.r0p*((-I1.Voltage()-v.ag)/v.r0g + (-I3.Voltage() - v.ak)/v.r0k));
-		//v.vp = (v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk)));
+		v.vp = (v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
+		//v.vp = -(v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk)));
 
+		//if (v.vp < -e) v.vp = -e;
+		//if (v.vp > e) v.vp = e;
 		v.bp = (2.0*v.vp - v.ap);
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		P2.setWD(-v.bp);		//+
+		P2.setWD(-v.bp);		//-
 		DUMP(printf("\n"));
 		
 		//v.vg = I1.Voltage(); 
 		//v.vk = I3.Voltage();
 		//v.vp = P2.Voltage(); 
 		DUMP(printf("vg=%f\t\t\tvk=%f\t\t\tvp=%f\nag=%f\tbg=%f\tak=%f\tbk=%f\tap=%f\tbp=%f\n",v.vg,v.vk,v.vp,v.ag,v.bg,v.ak,v.bk,v.ap,v.bp));
-		DUMP(printf("vg-ag=%.3f-\t\t\tvk-ak=%.3f+\t\t\tvp-ap=%.3f-\t\tIk=%f+ Ig=%f- Ip=%f\ng\n",v.vg-v.ag,v.vk-v.ak,v.vp-v.ap, -I3.Current(), -I1.Current(), P2.Current()));
+		DUMP(printf("vg-ag=%.3f-\t\t\tvk-ak=%.3f+\t\t\tvp-ap=%.3f-\t\tIk=%f+ Ig=%f- Ip=%f\ng\n",v.vg-v.ag,v.vk-v.ak,v.vp-v.ap, -I3.Current(), -I1.Current(), -P2.Current()));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
-		printf("%f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage(),Rg.Current());
+		printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),Ri.Voltage(),Rg.Current(),P2.Voltage());
 	}
 }
 
