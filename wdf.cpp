@@ -65,7 +65,7 @@ T mu(Valve v, T vk) {
 
 T beta(Valve v, T vg) {
 	if (v.ag == vg)
-		vg = v.ag + v.voff;
+		vg = v.ag + 0.01;
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
 	//if (v.ag == vg || v.ak == v.vk) 
 	//	x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
@@ -161,8 +161,8 @@ int main(){
 	ser I1 = ser(&Rg, &I4);
 	//inv I1 = inv(&S1);
 
-	par P1 = par(&Ck, &Rk);
-	inv I3 = inv(&P1);
+	par I3 = par(&Ck, &Rk);
+	//inv I3 = inv(&P1);
 	
 	ser S2 = ser(&Co, &Ro);
 	inv I2 = inv(&S2);
@@ -197,7 +197,7 @@ int main(){
 
 	I1.waveUp();
 	I3.waveUp();
-	v.vk = -I3.WU;
+	v.vk = I3.WU;
 	v.vp = 0.0;
 	I1.WD = 0.0;
 	I3.WD = 0.0;
@@ -212,14 +212,14 @@ int main(){
 		I3.waveUp();
 		P2.waveUp();
 		
-		v.vg = -(-I1.WU + v.voff); //IMPORTANT!!
+		v.vg = I1.WU + v.voff; //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = I1.WU;		//-
-		v.ak = -I3.WU;		//-
+		v.ak = I3.WU;		//-
 		v.ap = P2.WU;		//+
 		I1.WU = v.ag;		//-
-		I3.WU = -v.ak;		//-
+		I3.WU = v.ak;		//-
 		P2.WU = v.ap;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
@@ -269,12 +269,14 @@ Done:
 		v.bk = (2.0*v.vk - v.ak);
 		I1.setWD(v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(-v.bk);
+		I3.setWD(v.bk);
 		DUMP(printf("\n"));
 		
 		
-		v.vp = (v.ap - v.r0p*((v.vg-v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
-		//v.vp = -(v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk)));
+		v.vp = v.ap - v.r0p*((v.vg - v.ag)/v.r0g + (v.vk - v.ak)/v.r0k);
+		
+		//v.vp = v.vk + mu(v,v.vk)*(v.vk-v.vg-h(v,v.vk)+alpha(v,v.vk));
+		//v.vp = v.vk + (v.vg - v.vk - v.voff)*beta(v,v.vg);
 
 		//if (v.vp < -e) v.vp = -e;
 		//if (v.vp > e) v.vp = e;
@@ -292,7 +294,8 @@ Done:
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
-		printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Voltage());
+		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
+		printf("%f %f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage());
 	}
 }
 
