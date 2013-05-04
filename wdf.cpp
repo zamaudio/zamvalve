@@ -183,7 +183,7 @@ int main(){
 	Valve v;
 	v.D = 0.12;
 	v.K = 1.1;
-	v.voff = 0.2;
+	v.voff = -0.2;
 	v.mumin = 1e-9;
 	v.mu0 = 99.705;
 	v.mu1 = -22.98e-3;
