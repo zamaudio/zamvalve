@@ -142,7 +142,7 @@ int main(){
 	T rg = 20e3;
 	T ri = 1000e3;
 	T rk = 1000; //from paper
-	T e = 250.0;
+	T e = -250.0;
 
 	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
@@ -182,7 +182,7 @@ int main(){
 	Valve v;
 	v.D = 0.12;
 	v.K = 1.1;
-	v.voff = -0.2;
+	v.voff = 0.2;
 	v.mumin = 1e-9;
 	v.mu0 = 99.705;
 	v.mu1 = -22.98e-3;
@@ -197,7 +197,7 @@ int main(){
 
 	I1.waveUp();
 	I3.waveUp();
-	v.vk = I3.WU;
+	v.vk = -I3.WU;
 	v.vp = 0.0;
 	I1.WD = 0.0;
 	I3.WD = 0.0;
@@ -216,10 +216,10 @@ int main(){
 
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = I1.WU;		//-
-		v.ak = I3.WU;		//-
+		v.ak = -I3.WU;		//-
 		v.ap = P2.WU;		//+
 		I1.WU = v.ag;		//-
-		I3.WU = v.ak;		//-
+		I3.WU = -v.ak;		//-
 		P2.WU = v.ap;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
@@ -269,7 +269,7 @@ Done:
 		v.bk = (2.0*v.vk - v.ak);
 		I1.setWD(v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(v.bk);
+		I3.setWD(-v.bk);
 		DUMP(printf("\n"));
 		
 		
