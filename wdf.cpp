@@ -157,8 +157,8 @@ int main(){
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
 	par P0 = par(&I0, &Ri);
-	ser S1 = ser(&Rg, &P0);
-	inv I1 = inv(&S1);
+	ser I1 = ser(&Rg, &P0);
+	//inv I1 = inv(&S1);
 
 	par P1 = par(&Ck, &Rk);
 	inv I3 = inv(&P1);
@@ -181,7 +181,7 @@ int main(){
 	Valve v;
 	v.D = 0.12;
 	v.K = 1.1;
-	v.voff = -0.05;
+	v.voff = -0.2;
 	v.mumin = 1e-9;
 	v.mu0 = 99.705;
 	v.mu1 = -22.98e-3;
@@ -211,7 +211,7 @@ int main(){
 		I3.waveUp();
 		P2.waveUp();
 		
-		v.vg = -I1.WU - v.voff; //IMPORTANT!!
+		v.vg = -I1.WU + v.voff; //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = -I1.WU;		//-
@@ -242,12 +242,12 @@ int main(){
 			//vg0 = -I1.Voltage();
 			vg0 = v.vg;
 			vg1 = vg0 + f12(v,vg0);
-			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
+			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
 			if (v.vg - v.vk <= v.voff+0.01) goto Done;
 			
-			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
+			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 
 			if (++cnt > 3) goto Done;
