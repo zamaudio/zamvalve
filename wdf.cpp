@@ -65,8 +65,8 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	if (v.ag == vg)
-		vg = v.ag + 0.01;
+	//if (v.ag == vg)
+	//	vg = v.ag + 0.01;
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
 	//if (v.ag == vg || v.ak == v.vk) 
 	//	x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
@@ -86,9 +86,9 @@ T f12(Valve v, T vgn) {
 }
 
 T secantf8(Valve v, T *i1, T *i2) {
-	T tolerance = 1e-9;
+	T tolerance = 1e-8;
 	T vkn = 0.0;
-	for (int i = 0; i < 9; ++i) {
+	for (int i = 0; i < 100; ++i) {
 		vkn = *i1 - f8(v,*i1)*(*i1-*i2)/(f8(v,*i1)-f8(v,*i2));
 		*i1 = *i2;
 		*i2 = vkn;
@@ -99,9 +99,9 @@ T secantf8(Valve v, T *i1, T *i2) {
 }
 
 T secantf10(Valve v, T *i1, T *i2) {
-	T tolerance = 1e-9;
+	T tolerance = 1e-8;
 	T vkn = 0.0;
- 	for (int i = 0; i<9; ++i) {
+ 	for (int i = 0; i<100; ++i) {
 		vkn = *i1 - f10(v,*i1)*(*i1-*i2)/(f10(v,*i1)-f10(v,*i2));
 		*i1 = *i2;
 		*i2 = vkn;
@@ -111,9 +111,9 @@ T secantf10(Valve v, T *i1, T *i2) {
 }
 
 T secantf12(Valve v, T *i1, T *i2) {
-	T tolerance = 1e-9;
+	T tolerance = 1e-8;
 	T vgn = 0.0;
- 	for (int i = 0; i<9; ++i) {
+ 	for (int i = 0; i<100; ++i) {
 		vgn = *i1 - f12(v,*i1)*(*i1-*i2)/(f12(v,*i1)-f12(v,*i2));
 		*i1 = *i2;
 		*i2 = vgn;
@@ -125,7 +125,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs;
-	T gain = 1.0;
+	T gain = 4.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -143,7 +143,7 @@ int main(){
 	T rg = 20e3;
 	T ri = 1000e3;
 	T rk = 1000; //from paper
-	T e = 250.0;
+	T e = 200.0;
 
 	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
@@ -245,7 +245,7 @@ int main(){
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
 #if 1	
-		if (v.vg - v.vk <= v.voff+0.01) {
+		if (v.vg - v.vk <= v.voff-0.01) {
 			goto Done;
  		} else {
 			
@@ -256,7 +256,7 @@ int main(){
 			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
-			if (v.vg - v.vk <= v.voff+0.01) goto Done;
+			if (v.vg - v.vk <= v.voff-0.01) goto Done;
 			
 			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
@@ -296,7 +296,7 @@ Done:
 		
 		
 		v.ap = -P2.WU;
-		T Ip = (I3.Current() + I1.Current());
+		T Ip = -(I3.Current() + I1.Current());
 		
 		T m = 2.0*v.r0p*Ip;
 		m = max(m, -500.0);
