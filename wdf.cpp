@@ -125,7 +125,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	int N = Fs;
-	T gain = 4.0;
+	T gain = 1.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
 	T output[384000] = { 0.0 };
@@ -143,7 +143,7 @@ int main(){
 	T rg = 20e3;
 	T ri = 1000e3;
 	T rk = 1000; //from paper
-	T e = -250.0;
+	T e = 250.0;
 
 	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
@@ -154,7 +154,7 @@ int main(){
 	R Ri = R(ri);
 	R Rk = R(rk);
 	V E = V(e, rp);
-#if 1
+#if 0
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
 	par P0 = par(&I0, &Ri);
@@ -175,13 +175,16 @@ int main(){
 #else
 
 	ser S0 = ser(&Ci, &Vi);
-	par P0 = par(&S0, &Ri);
-	ser I1 = ser(&Rg, &P0);
+	inv I0 = inv(&S0);
+	par P0 = par(&I0, &Ri);
+	ser S1 = ser(&Rg, &P0);
+	inv I1 = inv(&S1);
 
 	par I3 = par(&Ck, &Rk);
 
 	ser S2 = ser(&Co, &Ro);
-	par P2 = par(&S2, &E);
+	inv I4 = inv(&S2);
+	par P2 = par(&I4, &E);
 #endif	
 
 	Valve v;
@@ -207,7 +210,9 @@ int main(){
 	I1.WD = 0.0;
 	I3.WD = 0.0;
 	P2.WD = 0.0;
-
+	
+	DUMP(printf("0j\tVi\tRo\tVg\tVk\tVp\tRi\tRk\tRg\tE\tCo\n"));
+	
 	for (int j = 0; j < N; ++j) {
 		//Step 1: read input sample as voltage for the source
 		Vi.e = input[j];
@@ -289,18 +294,22 @@ Done:
 		//if (v.vp < -e) v.vp = -e;
 		//if (v.vp > e) v.vp = e;
 		
-		P2.WU = P2.WU;
-		v.ap = -P2.WU;
-		T Ip = -(I3.Current() + I1.Current());
 		
-		v.bp = v.ap + 2.0*v.r0p*Ip;
+		v.ap = -P2.WU;
+		T Ip = (I3.Current() + I1.Current());
+		
+		T m = 2.0*v.r0p*Ip;
+		m = max(m, -500.0);
+		m = min(m, 500.0);
+				
+		v.bp = (v.ap + m);
 
 		//v.bp = 2.0*v.r0p*(I3.Current() + I1.Current()) + v.ap; //Ip = -Ik - Ig
 		v.vp = (v.ap + v.bp)/2.0;
 		//v.bp = (2.0*v.vp - v.ap);
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		P2.setWD(-v.bp);		//-
+		P2.setWD(v.bp);		//-
 		DUMP(printf("\n"));
 		
 		//v.vg = I1.Voltage(); 
@@ -312,7 +321,7 @@ Done:
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
-		printf("%f %f %f %f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage()*1000, Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage());
+		printf("%f %f %f %f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage());
 	}
 }
 
