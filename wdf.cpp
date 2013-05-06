@@ -176,9 +176,11 @@ int main(){
 #else
 
 	ser S0 = ser(&Ci, &Vi);
-	inv I0 = inv(&S0);
-	par P0 = par(&I0, &Ri);
-	ser S1 = ser(&Rg, &P0);
+	//inv I0 = inv(&S0);
+	inv I5 = inv(&Ri);
+	par P0 = par(&S0, &I5);
+	inv I0 = inv(&P0);
+	ser S1 = ser(&Rg, &I0);
 	inv I1 = inv(&S1);
 
 	par P3 = par(&Ck, &Rk);
@@ -187,7 +189,7 @@ int main(){
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
 	inv EE = inv(&E);
-	par I2 = par(&I4, &EE);
+	par I2 = par(&I4, &E);
 	inv P2 = inv(&I2);
 #endif	
 
@@ -226,10 +228,10 @@ int main(){
 		I3.waveUp();
 		P2.waveUp();
 		
-		v.vg = I1.WU + v.voff; //IMPORTANT!!
+		v.vg = -(I1.WU + v.voff); //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
-		v.ag = I1.WU;		//-
+		v.ag = -I1.WU;		//-
 		v.ak = I3.WU;		//-
 		v.ap = P2.WU;		//+
 		I1.WU = v.ag;		//-
@@ -248,7 +250,7 @@ int main(){
 		vk0 = v.vk;	//+
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 1	
+#if 0	
 		if (v.vg - v.vk <= v.voff-0.01) {
 			goto Done;
  		} else {
@@ -282,7 +284,7 @@ Done:
 		v.bg = (2.0*v.vg - v.ag);
 		v.bk = (2.0*v.vk - v.ak);
 		
-		I1.setWD(v.bg);
+		I1.setWD(-v.bg);
 		DUMP(printf("\n"));
 		I3.setWD(v.bk);
 		DUMP(printf("\n"));
@@ -308,9 +310,9 @@ Done:
 		I1.WU = v.ag;
 		I1.WD = -I1.WD;
 
-		v.ap = P2.WU;
-		P2.WU = v.ap;
-		P2.WD = P2.WD;
+		//v.ap = P2.WU;
+		//P2.WU = v.ap;
+		//P2.WD = P2.WD;
 		
 		T Ip = (I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
@@ -331,7 +333,7 @@ Done:
 		
 		v.ap = -P2.WU;
 		P2.WU = v.ap;
-		P2.WD = -P2.WD;
+		P2.WD = P2.WD;
 		
 		//v.vg = I1.Voltage(); 
 		//v.vk = I3.Voltage();
