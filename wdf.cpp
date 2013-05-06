@@ -300,18 +300,21 @@ Done:
 		v.ap = -P2.WU;
 		T Ip = -(I3.Current() + I1.Current());
 		
+		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
+		//if (Ip > (v.ap+e)/v.r0p) Ip = (v.ap+e)/v.r0p;
+
 		T m = 2.0*v.r0p*Ip;
-		m = max(m, -500.0);
-		m = min(m, 500.0);
-				
 		v.bp = (v.ap + m);
 
 		//v.bp = 2.0*v.r0p*(I3.Current() + I1.Current()) + v.ap; //Ip = -Ik - Ig
 		v.vp = (v.ap + v.bp)/2.0;
-		//v.bp = (2.0*v.vp - v.ap);
+		if (v.vp > e) v.vp = e;
+		if (v.vp < -e) v.vp = -e;
+
+		v.bp = (2.0*v.vp - v.ap);
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		P2.setWD(v.bp);		//-
+		P2.setWD(-v.bp);		//-
 		DUMP(printf("\n"));
 		
 		//v.vg = I1.Voltage(); 
