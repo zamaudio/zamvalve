@@ -125,7 +125,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs;
+	int N = Fs/3;
 	T gain = 4.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
@@ -308,9 +308,11 @@ Done:
 		I1.WU = v.ag;
 		I1.WD = -I1.WD;
 
-		v.ap = P2.WU;
-		P2.WU = v.ap;
-		T Ip = (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		//v.ap = P2.WU;
+		//P2.WU = v.ap;
+		//P2.WD = -P2.WD;
+		
+		T Ip = I3.Current() + I1.Current(); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
 		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
 		//if (Ip > (v.ap+e)/v.r0p) Ip = (v.ap+e)/v.r0p;
@@ -318,11 +320,10 @@ Done:
 		T m = 2.0*v.r0p*Ip;
 		v.bp = (v.ap + m);
 
-		//v.bp = 2.0*v.r0p*(I3.Current() + I1.Current()) + v.ap; //Ip = -Ik - Ig
-		v.vp = (v.ap + v.bp)/2.0;
+		v.vp = -200.0;//(v.ap + v.bp)/2.0;
 		if (fabs(v.vp) > e) v.vp = sign(v.vp)*e;
-
 		v.bp = (2.0*v.vp - v.ap);
+
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
 		P2.setWD(v.bp);		//-
@@ -330,7 +331,7 @@ Done:
 		
 		v.ap = -P2.WU;
 		P2.WU = v.ap;
-		P2.WD = -P2.WD;
+		P2.WD = P2.WD;
 		
 		//v.vg = I1.Voltage(); 
 		//v.vk = I3.Voltage();
