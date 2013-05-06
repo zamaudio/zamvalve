@@ -187,7 +187,7 @@ int main(){
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
 	inv EE = inv(&E);
-	par I2 = par(&I4, &E);
+	par I2 = par(&I4, &EE);
 	inv P2 = inv(&I2);
 #endif	
 
@@ -219,7 +219,7 @@ int main(){
 	
 	for (int j = 0; j < N; ++j) {
 		//Step 1: read input sample as voltage for the source
-		Vi.e = 4.0;//input[j];
+		Vi.e = input[j];
 
 		//Step 2: propagate waves up to the 3 roots
 		I1.waveUp();
@@ -249,7 +249,7 @@ int main(){
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
 #if 1	
-		if (v.vg - v.vk <= v.voff+0.01) {
+		if (v.vg - v.vk <= v.voff-0.01) {
 			goto Done;
  		} else {
 			
@@ -260,7 +260,7 @@ int main(){
 			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
-			if (v.vg - v.vk <= v.voff+0.01) goto Done;
+			if (v.vg - v.vk <= v.voff-0.01) goto Done;
 			
 			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
@@ -308,11 +308,11 @@ Done:
 		I1.WU = v.ag;
 		I1.WD = -I1.WD;
 
-		//v.ap = P2.WU;
-		//P2.WU = v.ap;
-		//P2.WD = -P2.WD;
+		v.ap = P2.WU;
+		P2.WU = v.ap;
+		P2.WD = P2.WD;
 		
-		T Ip = I3.Current() + I1.Current(); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		T Ip = (I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
 		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
 		//if (Ip > (v.ap+e)/v.r0p) Ip = (v.ap+e)/v.r0p;
@@ -320,7 +320,7 @@ Done:
 		T m = 2.0*v.r0p*Ip;
 		v.bp = (v.ap + m);
 
-		v.vp = -200.0;//(v.ap + v.bp)/2.0;
+		v.vp = (v.ap + v.bp)/2.0;
 		if (fabs(v.vp) > e) v.vp = sign(v.vp)*e;
 		v.bp = (2.0*v.vp - v.ap);
 
@@ -331,7 +331,7 @@ Done:
 		
 		v.ap = -P2.WU;
 		P2.WU = v.ap;
-		P2.WD = P2.WD;
+		P2.WD = -P2.WD;
 		
 		//v.vg = I1.Voltage(); 
 		//v.vk = I3.Voltage();
