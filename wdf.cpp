@@ -144,7 +144,7 @@ int main(){
 	T rg = 20e3;
 	T ri = 1000e3;
 	T rk = 1000; //from paper
-	T e = 200.0;
+	T e = -200.0;
 
 	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
@@ -211,7 +211,7 @@ int main(){
 
 	I1.waveUp();
 	I3.waveUp();
-	v.vk = I3.WU;
+	v.vk = -I3.WU;
 	v.vp = 0.0;
 	I1.WD = 0.0;
 	I3.WD = 0.0;
@@ -232,7 +232,7 @@ int main(){
 
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = -I1.WU;		//-
-		v.ak = I3.WU;		//-
+		v.ak = -I3.WU;		//-
 		v.ap = P2.WU;		//+
 		I1.WU = v.ag;		//-
 		I3.WU = v.ak;		//-
@@ -286,7 +286,7 @@ Done:
 		
 		I1.setWD(-v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(v.bk);
+		I3.setWD(-v.bk);
 		DUMP(printf("\n"));
 		
 
@@ -314,7 +314,7 @@ Done:
 		//P2.WU = v.ap;
 		//P2.WD = P2.WD;
 		
-		T Ip = (I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		T Ip = -(I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
 		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
 		//if (Ip > (v.ap+e)/v.r0p) Ip = (v.ap+e)/v.r0p;
