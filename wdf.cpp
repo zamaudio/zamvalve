@@ -303,9 +303,9 @@ Done:
 		
 		
 		
-		v.ak = -I3.WU;
+		v.ak = I3.WU;
 		I3.WU = v.ak;
-		I3.WD = -I3.WD;
+		I3.WD = I3.WD;
 		
 		v.ag = -I1.WU;
 		I1.WU = v.ag;
@@ -325,7 +325,7 @@ Done:
 		v.bp = (v.ap + m);
 
 		v.vp = (v.ap + v.bp)/2.0;
-		if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e;
+		if (fabs(v.vp) > e) v.vp = sign(v.vp)*e;
 		v.bp = (2.0*v.vp - v.ap);
 
 
@@ -343,13 +343,11 @@ Done:
 		DUMP(printf("vg=%f\t\t\tvk=%f\t\t\tvp=%f\nag=%f\tbg=%f\tak=%f\tbk=%f\tap=%f\tbp=%f\n",v.vg,v.vk,v.vp,v.ag,v.bg,v.ak,v.bk,v.ap,v.bp));
 		DUMP(printf("vg-ag=%.3f-\t\t\tvk-ak=%.3f+\t\t\tvp-ap=%.3f-\t\tIk=%f+ Ig=%f- Ip=%f\ng\n",v.vg-v.ag,v.vk-v.ak,v.vp-v.ap, I3.Current(), I1.Current(), P2.Current()));
 
-		I3.WU = -I3.WU;
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
 		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t:%.4f\t%.4f\t%.4f a:%.2f b:%.2f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ap,v.bp);
 		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t:%f\t%f\t%f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
-		I3.WU = -I3.WU;
 	}
 }
 
