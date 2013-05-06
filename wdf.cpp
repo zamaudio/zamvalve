@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #define max(x,y) (( (x) > (y) ) ? x : y )
 #define min(x,y) (( (x) < (y) ) ? x : y )
+#define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 
 // Works on little-endian machines only
 inline bool is_nan(T& value ) {
@@ -88,7 +89,7 @@ T f12(Valve v, T vgn) {
 T secantf8(Valve v, T *i1, T *i2) {
 	T tolerance = 1e-8;
 	T vkn = 0.0;
-	for (int i = 0; i < 100; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		vkn = *i1 - f8(v,*i1)*(*i1-*i2)/(f8(v,*i1)-f8(v,*i2));
 		*i1 = *i2;
 		*i2 = vkn;
@@ -101,7 +102,7 @@ T secantf8(Valve v, T *i1, T *i2) {
 T secantf10(Valve v, T *i1, T *i2) {
 	T tolerance = 1e-8;
 	T vkn = 0.0;
- 	for (int i = 0; i<100; ++i) {
+ 	for (int i = 0; i<50; ++i) {
 		vkn = *i1 - f10(v,*i1)*(*i1-*i2)/(f10(v,*i1)-f10(v,*i2));
 		*i1 = *i2;
 		*i2 = vkn;
@@ -113,7 +114,7 @@ T secantf10(Valve v, T *i1, T *i2) {
 T secantf12(Valve v, T *i1, T *i2) {
 	T tolerance = 1e-8;
 	T vgn = 0.0;
- 	for (int i = 0; i<100; ++i) {
+ 	for (int i = 0; i<50; ++i) {
 		vgn = *i1 - f12(v,*i1)*(*i1-*i2)/(f12(v,*i1)-f12(v,*i2));
 		*i1 = *i2;
 		*i2 = vgn;
@@ -297,8 +298,9 @@ Done:
 		//if (v.vp > e) v.vp = e;
 		
 		
-		v.ap = -P2.WU;
-		T Ip = -(I3.Current() + I1.Current());
+		v.ap = P2.WU;
+		P2.WU = v.ap;
+		T Ip = -(v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
 		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
 		//if (Ip > (v.ap+e)/v.r0p) Ip = (v.ap+e)/v.r0p;
@@ -307,14 +309,13 @@ Done:
 		v.bp = (v.ap + m);
 
 		//v.bp = 2.0*v.r0p*(I3.Current() + I1.Current()) + v.ap; //Ip = -Ik - Ig
-		v.vp = (v.ap + v.bp)/2.0;
-		if (v.vp > e) v.vp = e;
-		if (v.vp < -e) v.vp = -e;
+		v.vp = 100.0;//(v.ap + v.bp)/2.0;
+		if (fabs(v.vp) > e) v.vp = sign(v.vp)*e;
 
 		v.bp = (2.0*v.vp - v.ap);
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		P2.setWD(-v.bp);		//-
+		P2.setWD(v.bp);		//-
 		DUMP(printf("\n"));
 		
 		//v.vg = I1.Voltage(); 
@@ -326,7 +327,7 @@ Done:
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
-		printf("%f %f %f %f %f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage());
+		printf("%f %f %f %f %f %f %f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current());
 	}
 }
 
