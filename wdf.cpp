@@ -143,7 +143,7 @@ int main(){
 	T rg = 20e3;
 	T ri = 1000e3;
 	T rk = 1000; //from paper
-	T e = 200.0;
+	T e = 100.0;
 
 	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
@@ -183,8 +183,10 @@ int main(){
 	par I3 = par(&Ck, &Rk);
 
 	ser S2 = ser(&Co, &Ro);
-	inv I4 = inv(&S2);
-	par P2 = par(&I4, &E);
+	//inv I4 = inv(&S2);
+	inv EE = inv(&E);
+	par I2 = par(&S2, &EE);
+	inv P2 = inv(&I2);
 #endif	
 
 	Valve v;
@@ -211,7 +213,7 @@ int main(){
 	I3.WD = 0.0;
 	P2.WD = 0.0;
 	
-	DUMP(printf("0j\tVi\tRo\tVg\tVk\tVp\tRi\tRk\tRg\tE\tCo\n"));
+	DUMP(printf("0j\tVi\tRo\tVg\tVk\tVp\tRi\tRk\tRg\tE\tCo\tCk\n"));
 	
 	for (int j = 0; j < N; ++j) {
 		//Step 1: read input sample as voltage for the source
@@ -321,7 +323,7 @@ Done:
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
-		printf("%f %f %f %f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage());
+		printf("%f %f %f %f %f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage());
 	}
 }
 
