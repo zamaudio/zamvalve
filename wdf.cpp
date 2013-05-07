@@ -234,7 +234,7 @@ int main(){
 		v.ag = -I1.WU;		//-
 		v.ak = -I3.WU;		//-
 		v.ap = -P2.WU;		//+
-		I1.WU = v.ag;		//-
+		I1.WU = -v.ag;		//-
 		I3.WU = v.ak;		//-
 		P2.WU = -v.ap;		//+
 		v.r0g = I1.PortRes;
@@ -308,8 +308,11 @@ Done:
 		I3.WU = v.ak;
 		
 		//g
-		v.ag = I1.WU = I1.WU;
-		I1.WD = I1.WD;
+		v.ag = -I1.WD;
+		I1.WD = -I1.WU;
+		I1.WU = v.ag;
+		//v.ag = I1.WU = I1.WU;
+		//I1.WD = I1.WD;
 		
 		
 		//v.ap = P2.WU;
@@ -337,6 +340,9 @@ Done:
 		P2.WU = v.ap;
 		P2.WD = v.bp;
 		
+		//g
+		I1.WD = -I1.WD;
+		I1.WU = -I1.WU;
 		//v.vg = I1.Voltage(); 
 		//v.vk = I3.Voltage();
 		//v.vp = P2.Voltage(); 
