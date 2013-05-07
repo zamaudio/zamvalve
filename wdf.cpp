@@ -143,10 +143,10 @@ int main(){
 	T rp = 100e3;
 	T rg = 20e3;
 	T ri = 1000e3;
-	T rk = 1000; //from paper
+	T rk = 500; //from paper
 	T e = 200.0;
 
-	V Vi = V(0.0,10000.0);
+	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -251,7 +251,7 @@ int main(){
 		vk0 = v.vk;	//+
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 0	
+#if 1	
 		if (v.vg - v.vk <= v.voff+0.01) {
 			goto Done;
  		} else {
@@ -320,7 +320,8 @@ Done:
 		*/
 		
 		v.ap = -v.ap;
-		
+		I3.WU = -I3.WU;
+
 		//P2.WU = v.ap;
 
 	
