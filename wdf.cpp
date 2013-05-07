@@ -282,11 +282,11 @@ Done:
 		if (v.vk > e) v.vk = e;
 		*/
 		v.bg = -(2.0*v.vg - v.ag);
-		v.bk = -(2.0*v.vk - v.ak);
+		v.bk = (2.0*v.vk - v.ak);
 		
 		I1.setWD(v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(v.bk);
+		I3.setWD(-v.bk);
 		DUMP(printf("\n"));
 		
 
@@ -303,8 +303,9 @@ Done:
 		
 		
 		//k
-		v.ak = I3.WU = I3.WU;
-		I3.WD = -I3.WD;
+		v.ak = -I3.WD;
+		I3.WD = -I3.WU;
+		I3.WU = v.ak;
 		
 		//g
 		v.ag = I1.WU = I1.WU;
@@ -332,9 +333,9 @@ Done:
 		P2.setWD(-v.bp);		//-
 		DUMP(printf("\n"));
 		
-		v.ap = -v.ap;
+		v.ap = v.ap;
 		P2.WU = v.ap;
-		P2.WD = -v.bp;
+		P2.WD = v.bp;
 		
 		//v.vg = I1.Voltage(); 
 		//v.vk = I3.Voltage();
