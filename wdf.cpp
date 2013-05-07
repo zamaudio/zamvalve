@@ -233,10 +233,10 @@ int main(){
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = -I1.WU;		//-
 		v.ak = -I3.WU;		//-
-		v.ap = P2.WU;		//+
+		v.ap = -P2.WU;		//+
 		I1.WU = v.ag;		//-
 		I3.WU = v.ak;		//-
-		P2.WU = v.ap;		//+
+		P2.WU = -v.ap;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -281,12 +281,12 @@ Done:
 		if (v.vk < -e) v.vk = -e;
 		if (v.vk > e) v.vk = e;
 		*/
-		v.bg = (2.0*v.vg - v.ag);
-		v.bk = (2.0*v.vk - v.ak);
+		v.bg = -(2.0*v.vg - v.ag);
+		v.bk = -(2.0*v.vk - v.ak);
 		
-		I1.setWD(-v.bg);
+		I1.setWD(v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(-v.bk);
+		I3.setWD(v.bk);
 		DUMP(printf("\n"));
 		
 
@@ -302,19 +302,18 @@ Done:
 		//if (v.vp > e) v.vp = e;
 		
 		
+		//k
+		v.ak = I3.WU = I3.WU;
+		I3.WD = -I3.WD;
 		
-		v.ak = I3.WU;
-		I3.WU = v.ak;
-		I3.WD = I3.WD;
-		
-		v.ag = -I1.WU;
-		I1.WU = v.ag;
-		I1.WD = -I1.WD;
+		//g
+		v.ag = I1.WU = I1.WU;
+		I1.WD = I1.WD;
 		
 		
 		//v.ap = P2.WU;
-		//P2.WU = v.ap;
-		//P2.WD = P2.WD;
+		P2.WU = v.ap;
+
 	
 		T Ip = -(I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
@@ -325,17 +324,17 @@ Done:
 		v.bp = (v.ap + m);
 
 		v.vp = (v.ap + v.bp)/2.0;
-		if (fabs(v.vp) > e) v.vp = sign(v.vp)*e;
+		if (fabs(v.vp) > 2.0*e) v.vp = sign(v.vp)*2.0*e;
 		v.bp = (2.0*v.vp - v.ap);
 
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		P2.setWD(v.bp);		//-
+		P2.setWD(-v.bp);		//-
 		DUMP(printf("\n"));
 		
-		v.ap = -P2.WU;
+		v.ap = -v.ap;
 		P2.WU = v.ap;
-		P2.WD = -P2.WD;
+		P2.WD = -v.bp;
 		
 		//v.vg = I1.Voltage(); 
 		//v.vk = I3.Voltage();
