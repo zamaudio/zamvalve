@@ -319,34 +319,30 @@ Done:
 		//I1.WD = I1.WD;
 		*/
 		
+
+
 		I3.WU = -I3.WU;
 
 		//P2.WU = v.ap;
 
 		I3.WU = -I3.WU;
-		T Ip = (I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		//T Ip = (I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		I3.WD = -I3.WD;
 	
-		
+		//v.ap = P2.WU;	
 		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
 		//if (Ip > (v.ap+e)/v.r0p) Ip = (v.ap+e)/v.r0p;
 
-		T m = v.r0p*Ip;
-		v.bp = (v.ap + m);
+		//T m = 2.0*v.r0p*Ip;
+		//v.bp = (v.ap + m);
 
-		v.vp = (v.ap + v.bp)/2.0;
+		//v.vp = (v.ap + v.bp)/2.0;
 		//if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e;
-		v.bp = (2.0*v.vp - v.ap);
+		//v.bp = (2.0*v.vp - v.ap);
 
 
 		//Step 4: propagate waves leaving non-linearity back to the leaves
-		P2.setWD(v.bp);		//-
 		DUMP(printf("\n"));
-	/*	
-		v.ap = v.ap;
-		P2.WU = v.ap;
-		P2.WD = v.bp;
-	*/	
 		//g
 		//I1.WD = -I1.WD;
 		//I1.WU = -I1.WU;
@@ -354,22 +350,42 @@ Done:
 		
 		v.vg = I1.Voltage(); 
 		v.vk = I3.Voltage();
-		v.vp = P2.Voltage(); 
+		//v.vp = P2.Voltage(); 
 		v.ag = I1.WU;
 		v.bg = I1.WD;
 		v.ak = -I3.WU;
 		v.bk = -I3.WD;
-		I3.WU = -I3.WU;
-		I3.WD = -I3.WD;
+		//I3.WU = -I3.WU;
+		//I3.WD = -I3.WD;
 		
 		P2.WU = -P2.WU;
 		P2.WD = -P2.WD;
 
+///		P2.setWD(v.bp);		//-
 		I1.setWD(v.bg);
 		I3.setWD(v.bk);
 
-		DUMP(printf("vg=%f\t\t\tvk=%f\t\t\tvp=%f\nag=%f\tbg=%f\tak=%f\tbk=%f\tap=%f\tbp=%f\n",v.vg,v.vk,v.vp,v.ag,v.bg,v.ak,v.bk,v.ap,v.bp));
-		DUMP(printf("vg-ag=%.3f-\t\t\tvk-ak=%.3f+\t\t\tvp-ap=%.3f-\t\tIk=%f+ Ig=%f- Ip=%f\ng\n",v.vg-v.ag,v.vk-v.ak,v.vp-v.ap, I3.Current(), I1.Current(), P2.Current()));
+
+		///P stuff correct///
+		v.ap = P2.WU;
+		v.bp = P2.WD;
+
+		T Ip = -(I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		
+		T m = 2.0*v.r0p*Ip;
+		v.bp = (v.ap + m);
+
+		v.vp = (v.ap + v.bp)/2.0;
+		//if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e;
+		v.bp = (2.0*v.vp - v.ap);
+		v.bp = P2.WD = -v.bp;
+		v.ap = P2.WU = -v.ap;
+		
+		P2.setWD(v.bp);
+		/////////////////
+
+		DUMP(printf("B vk=%f vg=%f vp=%f\nB ag=%f\tbg=%f\tak=%f\tbk=%f\tap=%f\tbp=%f\n",v.vk,v.vg,v.vp,v.ag,v.bg,v.ak,v.bk,v.ap,v.bp));
+		DUMP(printf("B Ik=%f+ Ig=%f- Ip=%f Ip_calc=%f\n",I3.Current(), I1.Current(), P2.Current(),Ip));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
