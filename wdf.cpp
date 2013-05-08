@@ -143,10 +143,11 @@ int main(){
 	T rp = 100e3;
 	T rg = 20e3;
 	T ri = 1000e3;
-	T rk = 500; //from paper
-	T e = 200.0;
+	T rk = 100; //from paper
+	T e = 250.0;
+	T wmax = 20.0;
 
-	V Vi = V(0.0,1000.0);
+	V Vi = V(0.0,100.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -155,6 +156,7 @@ int main(){
 	R Ri = R(ri);
 	R Rk = R(rk);
 	V E = V(e, rp);
+
 #if 0
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
@@ -174,7 +176,6 @@ int main(){
 	par P4 = par(&E, &I2);
 	inv P2 = inv(&P4);
 #else
-
 	ser S0 = ser(&Ci, &Vi);
 	//inv I0 = inv(&S0);
 	inv I5 = inv(&Ri);
@@ -251,7 +252,7 @@ int main(){
 		vk0 = v.vk;	//+
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 1	
+#if 0	
 		if (v.vg - v.vk <= v.voff+0.01) {
 			goto Done;
  		} else {
@@ -260,12 +261,12 @@ int main(){
 			//vg0 = -I1.Voltage();
 			vg0 = v.vg;
 			vg1 = vg0 + f12(v,vg0);
-			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
+			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
-			if (v.vg - v.vk <= v.voff-0.01) goto Done;
+			if (v.vg - v.vk <= v.voff+0.01) goto Done;
 			
-			v.vg = secantf12(v, &vg0, &vg1) + v.voff;
+			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 
 			if (++cnt > 3) goto Done;
@@ -287,10 +288,10 @@ Done:
 		
 		I1.setWD(v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(v.bk);
+		I3.setWD(-v.bk);
 		DUMP(printf("\n"));
 		
-		I1.WD = -I1.WD;
+		I1.WD = I1.WD;
 		I3.WD = -I3.WD;
 		v.ap = -v.ap;
 
@@ -324,16 +325,18 @@ Done:
 
 		//P2.WU = v.ap;
 
+		I3.WD = -I3.WD;
+		I3.WU = -I3.WU;
 	
 		
 		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
 		//if (Ip > (v.ap+e)/v.r0p) Ip = (v.ap+e)/v.r0p;
 
-		T m = 2.0*v.r0p*Ip;
+		T m = v.r0p*Ip;
 		v.bp = (v.ap + m);
 
 		v.vp = (v.ap + v.bp)/2.0;
-		//if (fabs(v.vp) > e) v.vp = sign(v.vp)*e;
+		//if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e;
 		v.bp = (2.0*v.vp - v.ap);
 
 
