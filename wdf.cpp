@@ -143,7 +143,7 @@ int main(){
 	T rp = 100e3;
 	T rg = 20e3;
 	T ri = 1000e3;
-	T rk = 100; //from paper
+	T rk = 1000; //from paper
 	T e = 250.0;
 	T wmax = 20.0;
 
@@ -229,12 +229,11 @@ int main(){
 		I3.waveUp();
 		P2.waveUp();
 		
-		T Ip = -(I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		v.vg = (I1.WU + v.voff); //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = I1.WU;		//-
-		v.ak = I3.WU;		//-
+		v.ak = -I3.WU;		//-
 		v.ap = P2.WU;		//+
 		I1.WU = v.ag;		//-
 		I3.WU = v.ak;		//-
@@ -252,7 +251,7 @@ int main(){
 		vk0 = v.vk;	//+
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 0	
+#if 1	
 		if (v.vg - v.vk <= v.voff+0.01) {
 			goto Done;
  		} else {
@@ -288,12 +287,12 @@ Done:
 		
 		I1.setWD(v.bg);
 		DUMP(printf("\n"));
-		I3.setWD(-v.bk);
+		I3.setWD(v.bk);
 		DUMP(printf("\n"));
 		
 		I1.WD = I1.WD;
+		
 		I3.WD = -I3.WD;
-		v.ap = -v.ap;
 
 		//v.vp = (v.ap - v.r0p*((v.vg - v.ag)/v.r0g + (v.vk - v.ak)/v.r0k));
 		
@@ -320,13 +319,13 @@ Done:
 		//I1.WD = I1.WD;
 		*/
 		
-		v.ap = -v.ap;
 		I3.WU = -I3.WU;
 
 		//P2.WU = v.ap;
 
-		I3.WD = -I3.WD;
 		I3.WU = -I3.WU;
+		T Ip = (I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		I3.WD = -I3.WD;
 	
 		
 		//if (Ip < (v.ap-e)/v.r0p) Ip = (v.ap-e)/v.r0p;
@@ -358,13 +357,16 @@ Done:
 		v.vp = P2.Voltage(); 
 		v.ag = I1.WU;
 		v.bg = I1.WD;
-		v.ak = I3.WU;
-		v.bk = I3.WD;
+		v.ak = -I3.WU;
+		v.bk = -I3.WD;
+		I3.WU = -I3.WU;
+		I3.WD = -I3.WD;
+		
 		P2.WU = -P2.WU;
 		P2.WD = -P2.WD;
 
 		I1.setWD(v.bg);
-		I3.setWD(-v.bk);
+		I3.setWD(v.bk);
 
 		DUMP(printf("vg=%f\t\t\tvk=%f\t\t\tvp=%f\nag=%f\tbg=%f\tak=%f\tbk=%f\tap=%f\tbp=%f\n",v.vg,v.vk,v.vp,v.ag,v.bg,v.ak,v.bk,v.ap,v.bp));
 		DUMP(printf("vg-ag=%.3f-\t\t\tvk-ak=%.3f+\t\t\tvp-ap=%.3f-\t\tIk=%f+ Ig=%f- Ip=%f\ng\n",v.vg-v.ag,v.vk-v.ak,v.vp-v.ap, I3.Current(), I1.Current(), P2.Current()));
@@ -372,7 +374,7 @@ Done:
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
-		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t:%.4f\t%.4f\t%.4f a:%.2f b:%.2f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ap,v.bp);
+		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t:%.4f\t%.4f\t%.4f a:%.2f:%.2f b:%.2f:%.2f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ak,I3.WU, v.bk,I3.WD);
 		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t:%f\t%f\t%f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
 	}
 }
