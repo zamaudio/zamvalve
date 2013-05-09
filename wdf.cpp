@@ -178,16 +178,18 @@ int main(){
 #else
 	ser S0 = ser(&Ci, &Vi);
 	//inv I0 = inv(&S0);
-	inv I5 = inv(&Ri);
-	par P0 = par(&S0, &I5);
+	//inv I5 = inv(&Ri);
+	par P0 = par(&S0, &Ri);
 	inv I0 = inv(&P0);
-	ser S1 = ser(&Rg, &I0);
+	inv RRG = inv(&Rg);
+	ser S1 = ser(&RRG, &I0);
 	inv I1 = inv(&S1);
 
-	par P3 = par(&Ck, &Rk);
-	inv I3 = inv(&P3);
+	par I3 = par(&Ck, &Rk);
+	//inv I3 = inv(&P3);
 
-	ser S2 = ser(&Co, &Ro);
+	inv CCo = inv(&Co);
+	ser S2 = ser(&CCo, &Ro);
 	//inv I4 = inv(&S2);
 	inv EE = inv(&E);
 	par P2 = par(&S2, &E);
@@ -221,6 +223,7 @@ int main(){
 	DUMP(printf("0j\t  Vi\t  Ro\t  Vg\t  Vk\t  Vp\t  Ri\t  Rk\t  Rg\t  E\t  Co\t  Ck\t  EA\t  RoA\t  Ig\t  Ik\t  Ip\n"));
 	
 	for (int j = 0; j < N; ++j) {
+		for (int k = 0; k < 30; ++k) {
 		//Step 1: read input sample as voltage for the source
 		Vi.e = input[j];
 
@@ -228,7 +231,7 @@ int main(){
 		I1.waveUp();
 		I3.waveUp();
 		P2.waveUp();
-		
+
 		v.vg = (I1.WU + v.voff); //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
@@ -278,6 +281,8 @@ Done:
 		v.bg = (2.0*v.vg - v.ag);
 		v.bk = (2.0*v.vk - v.ak);
 		I1.setWD(v.bg);
+		v.ag = -v.ag;
+		I1.WU = v.ag;
 	/*	
 		T tmp = I3.WD;
 		I3.WD = -I3.WU;
@@ -336,22 +341,24 @@ Done:
 		T m = 2.0*v.r0p*Ip;
 		v.bp = (v.ap - m);
 
-		v.vp = (v.ap + v.bp)/2.0; //PUT BACK LATER !!
-		//if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e;
-		v.bp = (2.0*v.vp - v.ap);
-		v.bp = P2.WD = -v.bp; //+ 
-		v.ap = P2.WU = v.ap;  //-
-		
+		//v.vp = (v.ap + v.bp)/2.0; //PUT BACK LATER !!
+		//if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e/2.0;
+		//v.bp = (2.0*v.vp - v.ap);
+		P2.WD = -v.bp; //+ 
+		P2.WU = -v.ap;  //-
+		v.bp = -v.bp;
+		v.ap = -v.ap;
+
 		P2.setWD(v.bp);
 		/////////////////
-
-		DUMP(printf("B Ik=%f+ Ig=%f- Ip=%f Ip_calc=%f\n",I3.Current(), I1.Current(), P2.Current(),Ip));
+	}
+		//DUMP(printf("B Ik=%f+ Ig=%f- Ip=%f Ip_calc=%f\n",I3.Current(), I1.Current(), P2.Current(),Ip));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
-		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t:%.4f\t%.4f\t%.4f a:%.2f:%.2f b:%.2f:%.2f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ak,I3.WU, v.bk,I3.WD);
-		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t:%f\t%f\t%f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
+		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t:%.4f\t%.4f\t%.4f a:%.2f:%.2f b:%.2f:%.2f\n",j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), (v.ag-v.bg)/(2.0*v.r0g),(v.ak-v.bk)/(2.0*v.r0k),(v.ap-v.bp)/(2.0*v.r0p),v.ak,I3.WU, v.bk,I3.WD);
+		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t:%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), (v.ag-v.bg)/(2.0*v.r0g),(v.ak-v.bk)/(2.0*v.r0k),(v.ap-v.bp)/(2.0*v.r0p));
 	}
 }
 
