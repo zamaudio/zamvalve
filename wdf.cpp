@@ -157,32 +157,31 @@ int main(){
 	R Rk = R(rk);
 	V E = V(e, rp);
 
-#if 0
+#if 1
 	ser S0 = ser(&Ci, &Vi);
-	inv I0 = inv(&S0);
-	par P0 = par(&I0, &Ri);
-	inv I4 = inv(&P0);
-	ser I1 = ser(&Rg, &I4);
-	//inv I1 = inv(&S1);
+	//inv I0 = inv(&S0);
+	inv I5 = inv(&Ri);
+	par P0 = par(&S0, &I5);
+	inv I0 = inv(&P0);
+	ser S1 = ser(&Rg, &I0);
+	inv I1 = inv(&S1);
 
-	par I3 = par(&Ck, &Rk);
-	//inv I3 = inv(&P1);
-	
-	inv CC = inv(&Co);
-	inv RR = inv(&Ro);
-	ser I2 = ser(&RR, &CC);
-	//inv I2 = inv(&S2);
-	//inv E2 = inv(&E);
-	par P4 = par(&E, &I2);
-	inv P2 = inv(&P4);
+	par P3 = par(&Ck, &Rk);
+	inv I3 = inv(&P3);
+
+	ser S2 = ser(&Co, &Ro);
+	inv I4 = inv(&S2);
+	inv EE = inv(&E);
+	par P2 = par(&I4, &E);
+	//inv P2 = inv(&I2);
 #else
 	ser S0 = ser(&Ci, &Vi);
 	//inv I0 = inv(&S0);
-	//inv I5 = inv(&Ri);
-	par P0 = par(&S0, &Ri);
-	inv I0 = inv(&P0);
-	inv RRG = inv(&Rg);
-	ser S1 = ser(&RRG, &I0);
+	inv I5 = inv(&Ri);
+	par P0 = par(&S0, &I5);
+	//inv I0 = inv(&P0);
+	//inv RRG = inv(&Rg);
+	ser S1 = ser(&Rg, &P0);
 	inv I1 = inv(&S1);
 
 	par I3 = par(&Ck, &Rk);
@@ -194,6 +193,7 @@ int main(){
 	inv EE = inv(&E);
 	par P2 = par(&S2, &E);
 	//inv P2 = inv(&I2);
+
 #endif	
 
 	Valve v;
@@ -214,7 +214,7 @@ int main(){
 
 	I1.waveUp();
 	I3.waveUp();
-	v.vk = -I3.WU;
+	v.vk = I3.WU;
 	v.vp = 0.0;
 	I1.WD = 0.0;
 	I3.WD = 0.0;
@@ -223,7 +223,7 @@ int main(){
 	DUMP(printf("0j\t  Vi\t  Ro\t  Vg\t  Vk\t  Vp\t  Ri\t  Rk\t  Rg\t  E\t  Co\t  Ck\t  EA\t  RoA\t  Ig\t  Ik\t  Ip\n"));
 	
 	for (int j = 0; j < N; ++j) {
-		for (int k = 0; k < 30; ++k) {
+	//	for (int k = 0; k < 3; ++k) {
 		//Step 1: read input sample as voltage for the source
 		Vi.e = input[j];
 
@@ -239,7 +239,7 @@ int main(){
 		v.ak = I3.WU;		//-
 		v.ap = P2.WU;		//+
 		I1.WU = v.ag;		//-
-		I3.WU = -v.ak;		//-
+		I3.WU = v.ak;		//-
 		P2.WU = v.ap;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
@@ -278,10 +278,11 @@ Start:
 Done:
 #endif
 		 
-		v.bg = (2.0*v.vg - v.ag);
-		v.bk = (2.0*v.vk - v.ak);
+		v.bg = -(2.0*v.vg - v.ag);
+		v.vg = (v.ag + v.bg)/2.0;
+
 		I1.setWD(v.bg);
-		v.ag = -v.ag;
+		v.ag = v.ag;
 		I1.WU = v.ag;
 	/*	
 		T tmp = I3.WD;
@@ -293,8 +294,11 @@ Done:
 		I1.WD = -I1.WD;
 		I1.WU = -I1.WU;
 	*/	
+		v.ak = v.ak;
+		v.bk = (2.0*v.vk - v.ak);
 		I3.setWD(v.bk);
 		I3.WU = v.ak;
+		I3.WD = v.bk;
 		DUMP(printf("C calc     Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\n",(v.ak-v.bk)/(2.0),v.vk,v.ak,v.bk,(v.ag-v.bg)/(v.r0g*2.0),v.vg,v.ag,v.bg));
 		DUMP(printf("C measured Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\nC\n",I3.Current(),I3.Voltage(),I3.WU,I3.WD,I1.Current(),I1.Voltage(),I1.WU,I1.WD));
 		
@@ -336,7 +340,7 @@ Done:
 		v.bp = P2.WD;
 
 
-		T Ip = -((v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
+		T Ip = -(I3.Current() + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
 		
 		T m = 2.0*v.r0p*Ip;
 		v.bp = (v.ap - m);
@@ -351,7 +355,7 @@ Done:
 
 		P2.setWD(v.bp);
 		/////////////////
-	}
+	//}
 		//DUMP(printf("B Ik=%f+ Ig=%f- Ip=%f Ip_calc=%f\n",I3.Current(), I1.Current(), P2.Current(),Ip));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
