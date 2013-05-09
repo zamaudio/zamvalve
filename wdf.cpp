@@ -340,7 +340,7 @@ Done:
 		//if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e;
 		v.bp = (2.0*v.vp - v.ap);
 		v.bp = P2.WD = -v.bp; //+ 
-		v.ap = P2.WU = -v.ap;  //-
+		v.ap = P2.WU = v.ap;  //-
 		
 		P2.setWD(v.bp);
 		/////////////////
