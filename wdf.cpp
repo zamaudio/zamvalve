@@ -125,7 +125,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs/3;
+	int N = Fs/2;
 	T gain = 4.0;
 	T f0 = 1000.0;
 	T input[384000] = { 0.0 };
@@ -144,10 +144,10 @@ int main(){
 	T rg = 20e3;
 	T ri = 1000e3;
 	T rk = 1000; //from paper
-	T e = -250.0;
+	T e = 250.0;
 	T wmax = 20.0;
 
-	V Vi = V(0.0,100.0);
+	V Vi = V(0.0,1000.0);
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -184,20 +184,20 @@ int main(){
 	ser S1 = ser(&Rg, &I0);
 	inv I1 = inv(&S1);
 
-	par I3 = par(&Ck, &Rk);
-	//inv I3 = inv(&P3);
+	par P3 = par(&Ck, &Rk);
+	inv I3 = inv(&P3);
 
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
 	inv EE = inv(&E);
-	par I2 = par(&I4, &EE);
+	par I2 = par(&I4, &E);
 	inv P2 = inv(&I2);
 #endif	
 
 	Valve v;
 	v.D = 0.12;
 	v.K = 1.1;
-	v.voff = -0.2;
+	v.voff = -0.1;
 	v.mumin = 1e-9;
 	v.mu0 = 99.705;
 	v.mu1 = -22.98e-3;
@@ -212,7 +212,7 @@ int main(){
 
 	I1.waveUp();
 	I3.waveUp();
-	v.vk = -I3.WU;
+	v.vk = I3.WU;
 	v.vp = 0.0;
 	I1.WD = 0.0;
 	I3.WD = 0.0;
@@ -332,7 +332,7 @@ Done:
 		v.ap = P2.WU;
 		v.bp = P2.WD;
 
-		T Ip = -(max(0.0,I3.Current()) + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		T Ip = -((I3.Current()) + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
 		T m = 2.0*v.r0p*Ip;
 		v.bp = (v.ap - m);
