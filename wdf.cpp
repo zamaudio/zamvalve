@@ -144,7 +144,7 @@ int main(){
 	T rg = 20e3;
 	T ri = 1000e3;
 	T rk = 1000; //from paper
-	T e = 250.0;
+	T e = -250.0;
 	T wmax = 20.0;
 
 	V Vi = V(0.0,100.0);
@@ -190,7 +190,7 @@ int main(){
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
 	inv EE = inv(&E);
-	par I2 = par(&I4, &E);
+	par I2 = par(&I4, &EE);
 	inv P2 = inv(&I2);
 #endif	
 
@@ -212,7 +212,7 @@ int main(){
 
 	I1.waveUp();
 	I3.waveUp();
-	v.vk = I3.WU;
+	v.vk = -I3.WU;
 	v.vp = 0.0;
 	I1.WD = 0.0;
 	I3.WD = 0.0;
@@ -236,7 +236,7 @@ int main(){
 		v.ak = I3.WU;		//-
 		v.ap = P2.WU;		//+
 		I1.WU = v.ag;		//-
-		I3.WU = v.ak;		//-
+		I3.WU = -v.ak;		//-
 		P2.WU = v.ap;		//+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
@@ -277,10 +277,28 @@ Done:
 		 
 		v.bg = (2.0*v.vg - v.ag);
 		v.bk = (2.0*v.vk - v.ak);
-		DUMP(printf("C vk=%f ak=%f bk=%f\nC vg=%f ag=%f bg=%f\n",v.vk,v.ak,v.bk,v.vg,v.ag,v.bg));
-		
 		I1.setWD(v.bg);
 		I3.setWD(v.bk);
+		I3.WU = I3.WU;
+	/*	
+		T tmp = I3.WD;
+		I3.WD = -I3.WU;
+		I3.WU = -tmp;
+		
+		I3.WD = -I3.WD;
+		I3.WU = -I3.WU;
+		I1.WD = -I1.WD;
+		I1.WU = -I1.WU;
+	*/	
+		T tmp = I3.WD;
+		I3.WD = I3.WU;
+		I3.WU = -tmp;
+		tmp = v.bk;
+		v.bk = v.ak;
+		v.ak = -tmp;
+		DUMP(printf("C calc     Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\n",(v.ak-v.bk)/(2.0),v.vk,v.ak,v.bk,(v.ag-v.bg)/(v.r0g*2.0),v.vg,v.ag,v.bg));
+		DUMP(printf("C measured Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\nC\n",I3.Current(),I3.Voltage(),I3.WU,I3.WD,I1.Current(),I1.Voltage(),I1.WU,I1.WD));
+		
 
 /*	
 		I1.WD = I1.WD;
@@ -314,10 +332,10 @@ Done:
 		v.ap = P2.WU;
 		v.bp = P2.WD;
 
-		T Ip = (I3.Current() + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
+		T Ip = -(max(0.0,I3.Current()) + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
 		T m = 2.0*v.r0p*Ip;
-		v.bp = (v.ap + m);
+		v.bp = (v.ap - m);
 
 		v.vp = (v.ap + v.bp)/2.0; //PUT BACK LATER !!
 		//if (fabs(v.vp) > e) v.vp = -sign(v.vp)*e;
