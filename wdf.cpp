@@ -278,7 +278,6 @@ Done:
 		v.bg = (2.0*v.vg - v.ag);
 		v.bk = (2.0*v.vk - v.ak);
 		I1.setWD(v.bg);
-		I3.setWD(v.bk);
 		I3.WU = I3.WU;
 	/*	
 		T tmp = I3.WD;
@@ -296,9 +295,13 @@ Done:
 		tmp = v.bk;
 		v.bk = v.ak;
 		v.ak = -tmp;
+		I3.setWD(v.bk);
 		DUMP(printf("C calc     Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\n",(v.ak-v.bk)/(2.0),v.vk,v.ak,v.bk,(v.ag-v.bg)/(v.r0g*2.0),v.vg,v.ag,v.bg));
 		DUMP(printf("C measured Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\nC\n",I3.Current(),I3.Voltage(),I3.WU,I3.WD,I1.Current(),I1.Voltage(),I1.WU,I1.WD));
 		
+		//tmp = P2.WU;
+		//v.ap = (P2.WU = -P2.WD);
+		//v.bp = (P2.WD = -tmp);
 
 /*	
 		I1.WD = I1.WD;
@@ -328,9 +331,11 @@ Done:
 		I3.setWD(v.bk);
 */
 
+
 		///P stuff correct///
 		v.ap = P2.WU;
 		v.bp = P2.WD;
+
 
 		T Ip = -((I3.Current()) + I1.Current()); // (v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g); //(I3.Current() + I1.Current());
 		
