@@ -34,10 +34,11 @@ inline bool is_nan(T& value ) {
 	return false;
 }
 
-inline void sanitize_denormal(T& value) {
+inline T sanitize_denormal(T value) {
 	if (is_nan(value)) {
 		value = 0.0;
 	}
+	return value;
 }
 
 typedef struct valve {
@@ -66,11 +67,12 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	//if (v.ag == vg)
-	//	vg = v.ag + 0.01;
+	if (v.ag == vg)
+		vg = v.ag + 0.01;
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
 	//if (v.ag == vg || v.ak == v.vk) 
 	//	x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
+	x = sanitize_denormal(x);
 	return x;
 }
 
@@ -93,7 +95,7 @@ T secantf8(Valve v, T *i1, T *i2) {
 		vkn = *i1 - f8(v,*i1)*(*i1-*i2)/(f8(v,*i1)-f8(v,*i2));
 		*i1 = *i2;
 		*i2 = vkn;
-		if (fabs(f8(v,vkn)) < tolerance) break;
+		if (sanitize_denormal(fabs(f8(v,vkn))) < tolerance) break;
 	} 
 	//printf("%f\n",vkn);
 	return vkn;
@@ -106,7 +108,7 @@ T secantf10(Valve v, T *i1, T *i2) {
 		vkn = *i1 - f10(v,*i1)*(*i1-*i2)/(f10(v,*i1)-f10(v,*i2));
 		*i1 = *i2;
 		*i2 = vkn;
-		if (fabs(f10(v,vkn)) < tolerance) break;
+		if (sanitize_denormal(fabs(f10(v,vkn))) < tolerance) break;
 	}
 	return vkn;
 }
@@ -118,7 +120,7 @@ T secantf12(Valve v, T *i1, T *i2) {
 		vgn = *i1 - f12(v,*i1)*(*i1-*i2)/(f12(v,*i1)-f12(v,*i2));
 		*i1 = *i2;
 		*i2 = vgn;
-		if (fabs(f12(v,vgn)) < tolerance) break;
+		if (sanitize_denormal(fabs(f12(v,vgn))) < tolerance) break;
 	}
 	return vgn;
 }
@@ -157,7 +159,8 @@ int main(){
 	R Rk = R(rk);
 	V E = V(e, rp);
 
-#if 1
+#if 0
+//Mod
 	ser S0 = ser(&Ci, &Vi);
 	//inv I0 = inv(&S0);
 	inv I5 = inv(&Ri);
@@ -175,31 +178,24 @@ int main(){
 	par P2 = par(&I4, &E);
 	//inv P2 = inv(&I2);
 #else
+//Official
 	ser S0 = ser(&Ci, &Vi);
-	//inv I0 = inv(&S0);
-	inv I5 = inv(&Ri);
-	par P0 = par(&S0, &I5);
-	//inv I0 = inv(&P0);
-	//inv RRG = inv(&Rg);
+	inv I0 = inv(&S0);
+	par P0 = par(&I0, &Ri);
 	ser S1 = ser(&Rg, &P0);
 	inv I1 = inv(&S1);
 
 	par I3 = par(&Ck, &Rk);
-	//inv I3 = inv(&P3);
 
-	inv CCo = inv(&Co);
-	ser S2 = ser(&CCo, &Ro);
-	//inv I4 = inv(&S2);
-	inv EE = inv(&E);
-	par P2 = par(&S2, &E);
-	//inv P2 = inv(&I2);
-
+	ser S2 = ser(&Co, &Ro);
+	inv I4 = inv(&S2);
+	par P2 = par(&I4, &E);
 #endif	
 
 	Valve v;
 	v.D = 0.12;
 	v.K = 1.1;
-	v.voff = -0.1;
+	v.voff = -0.2;
 	v.mumin = 1e-9;
 	v.mu0 = 99.705;
 	v.mu1 = -22.98e-3;
@@ -232,15 +228,14 @@ int main(){
 		I3.waveUp();
 		P2.waveUp();
 
-		v.vg = (I1.WU - v.voff); //IMPORTANT!!
+		v.vg = (I1.WU) - v.voff; //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
 		v.ag = I1.WU;		//-
 		v.ak = I3.WU;		//-
 		v.ap = P2.WU;		//+
-		I1.WU = v.ag;		//-
-		I3.WU = v.ak;		//-
-		P2.WU = v.ap;		//+
+		//I1.WU = v.ag;		//-
+		//I3.WU = v.ak;		//-
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -248,13 +243,12 @@ int main(){
 		T vg0, vg1, vk0, vk1;
 
 		int cnt = 0;
-		//v.vg = I1.Voltage();	//-
 
-		vk0 = v.vk;	//+
+		vk0 = v.ak;	//+
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
 #if 1	
-		if (v.vg - v.vk <= v.voff/*+0.01*/) {
+		if (v.vg - v.vk <= v.voff+0.01) {
 			goto Done;
  		} else {
 			
@@ -262,12 +256,12 @@ int main(){
 			//vg0 = -I1.Voltage();
 			vg0 = v.vg;
 			vg1 = vg0 + f12(v,vg0);
-			v.vg = secantf12(v, &vg0, &vg1);// - v.voff;
+			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
 			if (v.vg - v.vk <= v.voff+0.01) goto Done;
 			
-			v.vg = secantf12(v, &vg0, &vg1);// - v.voff;
+			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 
 			if (++cnt > 3) goto Done;
