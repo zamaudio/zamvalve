@@ -36,6 +36,7 @@ inline bool is_nan(T& value ) {
 
 inline T sanitize_denormal(T value) {
 	if (is_nan(value)) {
+		fprintf(stderr,"Broken number ( %f )\n",value);
 		value = 0.0;
 	}
 	return value;
@@ -67,8 +68,10 @@ T mu(Valve v, T vk) {
 }
 
 T beta(Valve v, T vg) {
-	if (v.ag == vg)
+	if (v.ag == vg) {
+		fprintf(stderr,"Broken beta\n");
 		vg = v.ag + 0.01;
+	}
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
 	//if (v.ag == vg || v.ak == v.vk) 
 	//	x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k)),1.0/v.K));
@@ -127,11 +130,11 @@ T secantf12(Valve v, T *i1, T *i2) {
 
 int main(){ 
 	T Fs = 48000.0;
-	int N = Fs/2;
+	T N = Fs/2.0;
 	T gain = 4.0;
 	T f0 = 1000.0;
-	T input[384000] = { 0.0 };
-	T output[384000] = { 0.0 };
+	T input[38400] = { 0.0 };
+	T output[38400] = { 0.0 };
 	int i;
 	for (i = 0; i < N; ++i) {
 		input[i] = gain*sin(2.0*M_PI*f0/Fs*i);
