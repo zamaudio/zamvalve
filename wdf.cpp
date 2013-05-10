@@ -25,19 +25,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define max(x,y) (( (x) > (y) ) ? x : y )
 #define min(x,y) (( (x) < (y) ) ? x : y )
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
+#define BIG 1e11
+#define SMALL 1e-13
 
 // Works on little-endian machines only
 inline bool is_nan(T& value ) {
-	if (((*(uint32_t *) &value) & 0x7fffffff) > 0x7f800000) {
-		return true;
-	}
+//	if (((*(uint32_t *) &value) & 0x7fffffff) > 0x7f800000) {
+//		return true;
+//	}
+	if (value == 0.0) return false;
+	if (fabs(value) > BIG) return true;
+	if (fabs(value) < SMALL) return true;
 	return false;
 }
 
 inline T sanitize_denormal(T value) {
 	if (is_nan(value)) {
-		fprintf(stderr,"Broken number ( %f )\n",value);
-		value = 0.0;
+		fprintf(stderr,"Broken number ( %e )\n",value);
+		if (fabs(value) > BIG) {return BIG;} else {return 0.0;}
 	}
 	return value;
 }
