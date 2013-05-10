@@ -166,8 +166,8 @@ int main(){
 	ser S1 = ser(&Rg, &I0);
 	inv I1 = inv(&S1);
 
-	par P3 = par(&Ck, &Rk);
-	inv I3 = inv(&P3);
+	par I3 = par(&Ck, &Rk);
+	//inv I3 = inv(&P3);
 
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
@@ -254,7 +254,7 @@ int main(){
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
 #if 1	
-		if (v.vg - v.vk <= v.voff+0.01) {
+		if (v.vg - v.vk <= v.voff/*+0.01*/) {
 			goto Done;
  		} else {
 			
@@ -262,12 +262,12 @@ int main(){
 			//vg0 = -I1.Voltage();
 			vg0 = v.vg;
 			vg1 = vg0 + f12(v,vg0);
-			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
+			v.vg = secantf12(v, &vg0, &vg1);// - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
 			if (v.vg - v.vk <= v.voff+0.01) goto Done;
 			
-			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
+			v.vg = secantf12(v, &vg0, &vg1);// - v.voff;
 			v.vk = secantf8(v, &vk0, &vk1);
 
 			if (++cnt > 3) goto Done;
@@ -278,7 +278,7 @@ Start:
 Done:
 #endif
 		 
-		v.bg = -(2.0*v.vg - v.ag);
+		v.bg = (2.0*v.vg - v.ag);
 		v.vg = (v.ag + v.bg)/2.0;
 
 		I1.setWD(v.bg);
@@ -340,7 +340,7 @@ Done:
 		v.bp = P2.WD;
 
 
-		T Ip = -(I3.Current() + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
+		T Ip = -((v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
 		
 		T m = 2.0*v.r0p*Ip;
 		v.bp = (v.ap - m);
@@ -361,8 +361,8 @@ Done:
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
-		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t:%.4f\t%.4f\t%.4f a:%.2f:%.2f b:%.2f:%.2f\n",j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), (v.ag-v.bg)/(2.0*v.r0g),(v.ak-v.bk)/(2.0*v.r0k),(v.ap-v.bp)/(2.0*v.r0p),v.ak,I3.WU, v.bk,I3.WD);
-		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t:%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), (v.ag-v.bg)/(2.0*v.r0g),(v.ak-v.bk)/(2.0*v.r0k),(v.ap-v.bp)/(2.0*v.r0p));
+		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), (v.ag-v.bg)/(2.0*v.r0g),(v.ak-v.bk)/(2.0*v.r0k),(v.ap-v.bp)/(2.0*v.r0p),v.ak,I3.WU, v.bk,I3.WD);
+		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), (v.ag-v.bg)/(2.0*v.r0g),(v.ak-v.bk)/(2.0*v.r0k),(v.ap-v.bp)/(2.0*v.r0p));
 	}
 }
 
