@@ -27,6 +27,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 #define BIG 1e11
 #define SMALL 1e-13
+#define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
+#define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
+#define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
+#define SWAP_NN(x,y) {T tmp=y; y=-x; x=-tmp;}
+
 
 // Works on little-endian machines only
 inline bool is_nan(T& value ) {
@@ -223,36 +228,35 @@ int main(){
 	I1.WD = 0.0;
 	I3.WD = 0.0;
 	P2.WD = 0.0;
+		v.ap = P2.WU;		//+
 	
 	DUMP(printf("0j\t  Vi\t  Ro\t  Vg\t  Vk\t  Vp\t  Ri\t  Rk\t  Rg\t  E\t  Co\t  Ck\t  EA\t  RoA\t  Ig\t  Ik\t  Ip\n"));
 	
 	for (int j = 0; j < N; ++j) {
-	//	for (int k = 0; k < 3; ++k) {
+		P2.waveUp();
+		v.ap = P2.WU;
+		v.r0p = P2.PortRes;
+		//for (int k = 1; k <= 2; ++k) {
 		//Step 1: read input sample as voltage for the source
 		Vi.e = input[j];
 
 		//Step 2: propagate waves up to the 3 roots
 		I1.waveUp();
 		I3.waveUp();
-		P2.waveUp();
 
 		v.vg = (I1.WU) - v.voff; //IMPORTANT!!
 
 		//Step 3: compute wave reflections at non-linearity
-		v.ag = I1.WU;		//-
-		v.ak = I3.WU;		//-
-		v.ap = P2.WU;		//+
-		//I1.WU = v.ag;		//-
-		//I3.WU = v.ak;		//-
+		v.ag = I1.WU;
+		v.ak = I3.WU;
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
-		v.r0p = P2.PortRes;
 
 		T vg0, vg1, vk0, vk1;
 
 		int cnt = 0;
 
-		vk0 = v.ak;	//+
+		vk0 = v.ak;
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
 #if 1	
@@ -282,37 +286,41 @@ Done:
 		 
 		v.bg = (2.0*v.vg - v.ag);
 		v.vg = (v.ag + v.bg)/2.0;
-
 		I1.setWD(v.bg);
-		v.ag = v.ag;
 		I1.WU = v.ag;
 		
-		v.ak = v.ak;
 		v.bk = (2.0*v.vk - v.ak);
+		v.vk = (v.ak + v.bk)/2.0;
 		I3.setWD(v.bk);
 		I3.WU = v.ak;
-		I3.WD = v.bk;
+		
 		DUMP(printf("C calc     Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\n",(v.ak-v.bk)/(2.0),v.vk,v.ak,v.bk,(v.ag-v.bg)/(v.r0g*2.0),v.vg,v.ag,v.bg));
 		DUMP(printf("C measured Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\nC\n",I3.Current(),I3.Voltage(),I3.WU,I3.WD,I1.Current(),I1.Voltage(),I1.WU,I1.WD));
 		
 		///P stuff correct///
 		v.ap = P2.WU;
 		v.bp = P2.WD;
+		v.ap = v.ap;
 
-
-		T Ip = -((v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
+		T Ip = -(I3.Current()+I1.Current());//-((v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
 		
 		T m = 2.0*v.r0p*Ip;
+		//v.ap = -v.ap;
 		v.bp = (v.ap - m);
 
 		v.vp = (v.ap + v.bp)/2.0; //PUT BACK LATER !!
 		//if (fabs(v.vp) > 2.0*e) v.vp = sign(v.vp)*2.0*e;
+		//v.bp = (v.ap - 2.0*v.vp);
 		v.bp = (v.ap - 2.0*v.vp);
 		
 		P2.setWD(v.bp);
+		P2.WU = -v.ap;
+		P2.WD = v.bp;	
+		v.bp = P2.WD;
+		v.ap = P2.WU;
 		/////////////////
-		
-		DUMP(printf("B Ik=%f+ Ik_calc=%f   Ig=%f- Ig_calc=%f   Ip=%f Ip_calc=%f\n",I3.Current(), (v.ak-v.bk)/(2.0*v.r0k),I1.Current(), (v.ag-v.bg)/(2.0*v.r0g),P2.Current(),Ip));
+	//}
+//		DUMP(printf("B Ik=%f+ Ik_calc=%f   Ig=%f- Ig_calc=%f   Ip=%f Ip_calc=%f\n",I3.Current(), (v.ak-v.bk)/(2.0*v.r0k),I1.Current(), (v.ag-v.bg)/(2.0*v.r0g),P2.Current(),Ip));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
