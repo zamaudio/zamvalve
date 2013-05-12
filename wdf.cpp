@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define min(x,y) (( (x) < (y) ) ? x : y )
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 #define BIG 1e11
-#define SMALL 1e-13
+#define SMALL 1e-23
 #define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
 #define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
 #define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
@@ -47,7 +47,8 @@ inline bool is_nan(T& value ) {
 inline T sanitize_denormal(T value) {
 	if (is_nan(value)) {
 		fprintf(stderr,"Broken number ( %e )\n",value);
-		if (fabs(value) > BIG) {return BIG;} else {return 0.0;}
+		if (fabs(value) > BIG) {return BIG;}
+		if (fabs(value) < SMALL) {return SMALL;}
 	}
 	return value;
 }
@@ -80,7 +81,7 @@ T mu(Valve v, T vk) {
 T beta(Valve v, T vg) {
 	if (v.ag == vg) {
 		fprintf(stderr,"Broken beta\n");
-		vg = v.ag + 0.01;
+		vg = v.r0g/v.r0k*(v.ak-v.vk)+v.ag;
 	}
 	T x = (powf(fabs(-1.0/v.D*(v.r0g/v.r0k*(((v.ak-v.vk)/(v.ag-vg))+1.0))),1.0/v.K));
 	//if (v.ag == vg || v.ak == v.vk) 
@@ -272,7 +273,8 @@ int main(){
 
 		T vg0, vg1, vk0, vk1;
 
-		T tol = 1e-7;
+		T tol = 1e-6;
+		int cnt=0;
 
 		vk0 = v.ak;
 		vk1 = vk0 + f10(v, vk0);
@@ -282,7 +284,7 @@ int main(){
 		if (v.vk < v.ak)
 			v.vk = v.ak;
 
-#if 1	
+#if 0	
 		if (v.vg - v.vk <= v.voff) {
 			goto Done;
  		} else {
@@ -298,7 +300,7 @@ Start:
 			vk1 = v.vk + f8(v, v.vk);
 			v.vk = secantf8(v, &vk0, &vk1);
 
-			if (fabs(f8(v,v.vk)) < tol) goto Done;
+			if (fabs(f8(v,v.vk)) < tol || cnt++ > 5) goto Done;
 			goto Start;
 		}
 
@@ -309,11 +311,13 @@ Done:
 		v.vg = (v.ag + v.bg)/2.0;
 		I1.setWD(v.bg);
 		I1.WU = v.ag;
+		I1.WD = v.bg;
 		
 		v.bk = (2.0*v.vk - v.ak);
 		v.vk = (v.ak + v.bk)/2.0;
 		I3.setWD(v.bk);
-		v.bk=v.bk;
+		//v.bk=v.bk;
+		I3.WU = v.ak;
 		I3.WD = v.bk;
 		
 		DUMP(printf("C calc     Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\n",(v.ak-v.bk)/(2.0),v.vk,v.ak,v.bk,(v.ag-v.bg)/(v.r0g*2.0),v.vg,v.ag,v.bg));
@@ -326,7 +330,7 @@ Done:
 		
 		//P2.setWD(v.ap);
 
-		T Ip = (I3.Current()+I1.Current());//-((v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
+		T Ip = (I3.Current());//+I1.Current());//-((v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
 		
 		T m = 2.0*v.r0p*Ip;
 		//v.ap = -v.ap;
@@ -338,6 +342,12 @@ Done:
 		v.bp = (v.ap - 2.0*v.vp);
 		
 		P2.setWD(v.bp);
+
+//		SWAP_NN(P2.WU,P2.WD);
+//		P2.WU=P2.WU;
+//		P2.WD=P2.WD;
+//		v.ap=v.ap;
+//		v.bp=v.bp;
 		/////////////////
 //	}
 	
@@ -345,13 +355,19 @@ Done:
 		P2.WD = v.bp;	
 		v.bp = P2.WD;
 		v.ap = P2.WU;
+		/*
+		v.ak = I3.WU;
+		v.bk = I3.WD;
+		I3.WU = v.ak;
+		I3.WD = v.bk;
+//		*/
 //		DUMP(printf("B Ik=%f+ Ik_calc=%f   Ig=%f- Ig_calc=%f   Ip=%f Ip_calc=%f\n",I3.Current(), (v.ak-v.bk)/(2.0*v.r0k),I1.Current(), (v.ag-v.bg)/(2.0*v.r0g),P2.Current(),Ip));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
 		output[j] = Ro.Voltage();
 		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
-		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), (v.ag-v.bg)/(2.0*v.r0g),(v.ak-v.bk)/(2.0*v.r0k),(v.ap-v.bp)/(2.0*v.r0p),v.ak,I3.WU, v.bk,I3.WD);
-		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
+		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ak,I3.WU, v.bk,I3.WD);
+		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
 	}
 }
 
