@@ -109,6 +109,12 @@ T secantf8(Valve v, T *i1, T *i2) {
 		*i1 = *i2;
 		*i2 = vkn;
 		if (sanitize_denormal(fabs(f8(v,vkn))) < tolerance) break;
+		if (vkn < v.ak)
+			break;
+			//vkn = v.ak;
+		if (vkn < (v.ag-v.vg)*v.r0k/v.r0g+v.ak) 
+			break;
+			//vkn = (v.ag-v.vg)*v.r0k/v.r0g+v.ak;
 	} 
 	//printf("%f\n",vkn);
 	return vkn;
@@ -122,6 +128,12 @@ T secantf10(Valve v, T *i1, T *i2) {
 		*i1 = *i2;
 		*i2 = vkn;
 		if (sanitize_denormal(fabs(f10(v,vkn))) < tolerance) break;
+		if (vkn < v.ak) 
+			break;
+			//vkn = v.ak;
+		if (vkn < (v.ag-v.vg)*v.r0k/v.r0g+v.ak) 
+			break;
+			//vkn = (v.ag-v.vg)*v.r0k/v.r0g+v.ak;
 	}
 	return vkn;
 }
@@ -134,6 +146,12 @@ T secantf12(Valve v, T *i1, T *i2) {
 		*i1 = *i2;
 		*i2 = vgn;
 		if (sanitize_denormal(fabs(f12(v,vgn))) < tolerance) break;
+		if (vgn > v.ag) 
+			break;
+			//vgn = v.ag;
+		if (vgn < (v.ak-v.vk)*v.r0g/v.r0k+v.ag) 
+			break;
+			//vgn = (v.ak-v.vk)*v.r0g/v.r0k+v.ag;
 	}
 	return vgn;
 }
@@ -237,13 +255,13 @@ int main(){
 		I1.waveUp();
 		I3.waveUp();
 		P2.waveUp();
-		v.ap = P2.WU;
-		v.r0p = P2.PortRes;
 		v.ag = I1.WU;
 		v.ak = I3.WU;
+		v.ap = P2.WU;
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
-		v.vg = (I1.WU) - v.voff; //IMPORTANT!!
+		v.r0p = P2.PortRes;
+		v.vg = v.ag;
 	    for (int k = 1; k <= 2; ++k) {
 		//Step 1: read input sample as voltage for the source
 
@@ -254,30 +272,28 @@ int main(){
 
 		T vg0, vg1, vk0, vk1;
 
-		int cnt = 0;
+		T tol = 1e-5;
 
 		vk0 = v.ak;
 		vk1 = vk0 + f10(v, vk0);
 		v.vk = secantf10(v, &vk0, &vk1);
-#if 1	
-		if (v.vg - v.vk <= v.voff+0.01) {
+#if 0	
+		if (v.vg - v.vk <= v.voff) {
 			goto Done;
  		} else {
-			
-			//initial guess for vg
-			//vg0 = -I1.Voltage();
-			vg0 = v.vg;
-			vg1 = vg0 + f12(v,vg0);
-			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
+			vg0 = v.ag;
+			v.vg = v.ag;
+			vk1 = (v.ag-v.vg)*v.r0k/v.r0g + v.ak;
 			v.vk = secantf8(v, &vk0, &vk1);
 Start:
-			if (v.vg - v.vk <= v.voff+0.01) goto Done;
-			
-			v.vg = secantf12(v, &vg0, &vg1) - v.voff;
+			if (v.vg - v.vk <= v.voff) goto Done;
+			vg1 = vg0 + f12(v,vg0);
+			v.vg = secantf12(v, &vg0, &vg1);
+			vk0 = v.vk; 
+			vk1 = v.vk + f8(v, v.vk);
 			v.vk = secantf8(v, &vk0, &vk1);
 
-			if (++cnt > 3) goto Done;
-			
+			if (fabs(f8(v,v.vk)) < tol) goto Done;
 			goto Start;
 		}
 
