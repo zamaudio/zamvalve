@@ -233,24 +233,24 @@ int main(){
 	DUMP(printf("0j\t  Vi\t  Ro\t  Vg\t  Vk\t  Vp\t  Ri\t  Rk\t  Rg\t  E\t  Co\t  Ck\t  EA\t  RoA\t  Ig\t  Ik\t  Ip\n"));
 	
 	for (int j = 0; j < N; ++j) {
+		Vi.e = input[j];
+		I1.waveUp();
+		I3.waveUp();
 		P2.waveUp();
 		v.ap = P2.WU;
 		v.r0p = P2.PortRes;
-		//for (int k = 1; k <= 2; ++k) {
-		//Step 1: read input sample as voltage for the source
-		Vi.e = input[j];
-
-		//Step 2: propagate waves up to the 3 roots
-		I1.waveUp();
-		I3.waveUp();
-
-		v.vg = (I1.WU) - v.voff; //IMPORTANT!!
-
-		//Step 3: compute wave reflections at non-linearity
 		v.ag = I1.WU;
 		v.ak = I3.WU;
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
+		v.vg = (I1.WU) - v.voff; //IMPORTANT!!
+	    for (int k = 1; k <= 2; ++k) {
+		//Step 1: read input sample as voltage for the source
+
+		//Step 2: propagate waves up to the 3 roots
+
+
+		//Step 3: compute wave reflections at non-linearity
 
 		T vg0, vg1, vk0, vk1;
 
@@ -314,12 +314,13 @@ Done:
 		v.bp = (v.ap - 2.0*v.vp);
 		
 		P2.setWD(v.bp);
+		/////////////////
+	}
+	
 		P2.WU = -v.ap;
 		P2.WD = v.bp;	
 		v.bp = P2.WD;
 		v.ap = P2.WU;
-		/////////////////
-	//}
 //		DUMP(printf("B Ik=%f+ Ik_calc=%f   Ig=%f- Ig_calc=%f   Ip=%f Ip_calc=%f\n",I3.Current(), (v.ak-v.bk)/(2.0*v.r0k),I1.Current(), (v.ag-v.bg)/(2.0*v.r0g),P2.Current(),Ip));
 
 		//Step 5: measure the voltage across the output load resistance and set the sample
