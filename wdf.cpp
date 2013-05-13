@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define min(x,y) (( (x) < (y) ) ? x : y )
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 #define BIG 1e11
-#define SMALL 1e-23
+#define SMALL 1e-18
 #define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
 #define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
 #define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
@@ -157,10 +157,57 @@ T secantf12(Valve v, T *i1, T *i2) {
 	return vgn;
 }
 
+
+/////////////////////////////////// Second valve model
+
+typedef struct valve2 {
+	T r0g; T ag; T bg; T vg;
+	T r0k; T ak; T bk; T vk;
+	T r0p; T ap; T bp; T vp;
+	T g, mu, gamma, c, gg, e, cg, ig0;
+} Valve2;
+
+T fg(Valve2 v, T vg) {
+	return (v.ag-v.r0g*v.gg*powf(log(1.0+exp(v.cg*vg))/v.cg,v.e)+v.ig0-vg);
+}
+
+T fp(Valve2 v, T vp) {
+	return (-v.r0p*(v.g*powf(log(1.0+exp(v.c*(vp/v.mu+v.vg)))/v.c,v.gamma))+v.ap-vp);
+}
+
+T fk(Valve2 v) {
+	return (v.ak + v.r0k*((v.vp-v.ap)/v.r0p+(v.vg-v.ag)/v.r0g));
+}
+
+T secantfg(Valve2 v, T *i1, T *i2) {
+        T tolerance = 1e-8;
+        T vgn = 0.0;
+        for (int i = 0; i<50; ++i) {
+                vgn = *i1 - fg(v,*i1)*(*i1-*i2)/(fg(v,*i1)-fg(v,*i2));
+                *i1 = *i2;
+                *i2 = vgn;
+                if (sanitize_denormal(fabs(fg(v,vgn))) < tolerance) break;
+        }
+        return vgn;
+}
+
+
+T secantfp(Valve2 v, T *i1, T *i2) {
+        T tolerance = 1e-8;
+        T vpn = 0.0;
+        for (int i = 0; i<50; ++i) {
+                vpn = *i1 - fp(v,*i1)*(*i1-*i2)/(fp(v,*i1)-fp(v,*i2));
+                *i1 = *i2;
+                *i2 = vpn;
+                if (sanitize_denormal(fabs(fp(v,vpn))) < tolerance) break;
+        }
+        return vpn;
+}
+
 int main(){ 
 	T Fs = 48000.0;
 	T N = Fs/2.0;
-	T gain = 4.0;
+	T gain = 2.0;
 	T f0 = 1000.0;
 	T input[38400] = { 0.0 };
 	T output[38400] = { 0.0 };
@@ -194,15 +241,13 @@ int main(){
 #if 0
 //Mod
 	ser S0 = ser(&Ci, &Vi);
-	//inv I0 = inv(&S0);
+	inv I0 = inv(&S0);
 	inv I5 = inv(&Ri);
-	par P0 = par(&S0, &I5);
-	inv I0 = inv(&P0);
-	ser S1 = ser(&Rg, &I0);
+	par P0 = par(&I0, &I5);
+	ser S1 = ser(&Rg, &P0);
 	inv I1 = inv(&S1);
 
 	par I3 = par(&Ck, &Rk);
-	//inv I3 = inv(&P3);
 
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
@@ -218,12 +263,13 @@ int main(){
 	inv I1 = inv(&S1);
 
 	par I3 = par(&Ck, &Rk);
+//	inv I3 = inv(&S3);
 
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
 	par P2 = par(&I4, &E);
 #endif	
-
+/*
 	Valve v;
 	v.D = 0.12;
 	v.K = 1.1;
@@ -239,15 +285,23 @@ int main(){
 	v.G1 = 15.12e-6;
 	v.G2 = -31.56e-6;
 	v.G3 = -3.286e-6;
+*/
+	// 12AX7 triode model RSD-1
+	Valve2 v;
+	v.g = 2.242e-3;
+	v.mu = 103.2;
+	v.gamma = 1.26;
+	v.c = 3.4;
+	v.gg = 6.177e-4;
+	v.e = 1.314;
+	v.cg = 9.901;
+	v.ig0 = 8.025e-8;
 
 	I1.waveUp();
 	I3.waveUp();
-	v.vk = I3.WU;
-	v.vp = 0.0;
 	I1.WD = 0.0;
 	I3.WD = 0.0;
 	P2.WD = 0.0;
-		v.ap = P2.WU;		//+
 	
 	DUMP(printf("0j\t  Vi\t  Ro\t  Vg\t  Vk\t  Vp\t  Ri\t  Rk\t  Rg\t  E\t  Co\t  Ck\t  EA\t  RoA\t  Ig\t  Ik\t  Ip\n"));
 	
@@ -262,8 +316,6 @@ int main(){
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
-		v.vg = v.ag;
-//	    for (int k = 1; k <= 2; ++k) {
 		//Step 1: read input sample as voltage for the source
 
 		//Step 2: propagate waves up to the 3 roots
@@ -271,103 +323,28 @@ int main(){
 
 		//Step 3: compute wave reflections at non-linearity
 
-		T vg0, vg1, vk0, vk1;
+		T vg0, vg1, vp0, vp1;
 
-		T tol = 1e-6;
-		int cnt=0;
+		vg0 = v.ag;
+		vg1 = v.ag + fg(v, v.ag);
+		v.vg = secantfg(v, &vg0, &vg1);
+		
+		vp0 = v.ap;
+		vp1 = v.ap + fp(v, v.ap);
+		v.vp = secantfp(v, &vp0, &vp1);
 
-		vk0 = v.ak;
-		vk1 = vk0 + f10(v, vk0);
-		v.vk = secantf10(v, &vk0, &vk1);
-		if (v.vk < (v.ag-v.vg)*v.r0k/v.r0g + v.ak) 
-			v.vk = (v.ag-v.vg)*v.r0k/v.r0g + v.ak;
-		if (v.vk < v.ak)
-			v.vk = v.ak;
+		v.vk = fk(v);
 
-#if 0	
-		if (v.vg - v.vk <= v.voff) {
-			goto Done;
- 		} else {
-			vg0 = v.ag;
-			v.vg = v.ag;
-			vk1 = (v.ag-v.vg)*v.r0k/v.r0g + v.ak;
-			v.vk = secantf8(v, &vk0, &vk1);
-Start:
-			if (v.vg - v.vk <= v.voff) goto Done;
-			vg1 = vg0 + f12(v,vg0);
-			v.vg = secantf12(v, &vg0, &vg1);
-			vk0 = v.vk; 
-			vk1 = v.vk + f8(v, v.vk);
-			v.vk = secantf8(v, &vk0, &vk1);
-
-			if (fabs(f8(v,v.vk)) < tol || cnt++ > 5) goto Done;
-			goto Start;
-		}
-
-Done:
-#endif
-		 
-		v.bg = (2.0*v.vg - v.ag);
-		v.vg = (v.ag + v.bg)/2.0;
+		v.bg = 2.0*v.vg-v.ag;
+		v.bp = 2.0*v.vp-v.ap;
+		v.bk = 2.0*v.vk-v.ak;
+		
 		I1.setWD(v.bg);
-		I1.WU = v.ag;
-		I1.WD = v.bg;
-		
-		v.bk = (2.0*v.vk - v.ak);
-		v.vk = (v.ak + v.bk)/2.0;
+		P2.setWD(v.bp);	
 		I3.setWD(v.bk);
-		//v.bk=v.bk;
-		I3.WU = v.ak;
-		I3.WD = v.bk;
 		
-		DUMP(printf("C calc     Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\n",(v.ak-v.bk)/(2.0),v.vk,v.ak,v.bk,(v.ag-v.bg)/(v.r0g*2.0),v.vg,v.ag,v.bg));
-		DUMP(printf("C measured Ik=%f vk=%f : ak=%f bk=%f : Ig=%f vg=%f : ag=%f bg=%f\nC\n",I3.Current(),I3.Voltage(),I3.WU,I3.WD,I1.Current(),I1.Voltage(),I1.WU,I1.WD));
-		
-		///P stuff correct///
-		v.ap = P2.WU;
-		v.bp = P2.WD;
-		v.ap = -v.ap;
-		
-		//P2.setWD(v.ap);
-
-		T Ip = (I3.Current());//+I1.Current());//-((v.ak-v.bk)/(2.0*v.r0k) + (v.ag-v.bg)/(2.0*v.r0g)); //(I3.Current() + I1.Current());
-		
-		T m = 2.0*v.r0p*Ip;
-		//v.ap = -v.ap;
-		v.bp = (v.ap - m);
-
-		v.vp = (v.ap + v.bp)/2.0; //PUT BACK LATER !!
-		//if (fabs(v.vp) > 2.0*e) v.vp = sign(v.vp)*2.0*e;
-		//v.bp = (v.ap - 2.0*v.vp);
-		v.bp = (v.ap - 2.0*v.vp);
-		
-		P2.setWD(v.bp);
-
-//		SWAP_NN(P2.WU,P2.WD);
-//		P2.WU=P2.WU;
-//		P2.WD=P2.WD;
-//		v.ap=v.ap;
-//		v.bp=v.bp;
-		/////////////////
-//	}
-	
-		P2.WU = -v.ap;
-		P2.WD = v.bp;	
-		v.bp = P2.WD;
-		v.ap = P2.WU;
-		/*
-		v.ak = I3.WU;
-		v.bk = I3.WD;
-		I3.WU = v.ak;
-		I3.WD = v.bk;
-//		*/
-//		DUMP(printf("B Ik=%f+ Ik_calc=%f   Ig=%f- Ig_calc=%f   Ip=%f Ip_calc=%f\n",I3.Current(), (v.ak-v.bk)/(2.0*v.r0k),I1.Current(), (v.ag-v.bg)/(2.0*v.r0g),P2.Current(),Ip));
-
-		//Step 5: measure the voltage across the output load resistance and set the sample
-		output[j] = Ro.Voltage();
-		//printf("%f %f %f %f %f %f %f %f\n", j/Fs, Vi.Voltage(), Ro.Voltage(), Rk.Voltage(), Rg.Voltage(),I1.Voltage(),Ri.Voltage(),P2.Current());
 		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ak,I3.WU, v.bk,I3.WD);
-		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
+		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
 	}
 }
 
