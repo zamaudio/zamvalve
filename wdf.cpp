@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <stdio.h>
 #include <inttypes.h>
-#include <cmath>
+#include <math.h>
 #include "wdf.h"
 
 #define max(x,y) (( (x) > (y) ) ? x : y )
@@ -27,12 +27,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 #define BIG 1e11
 #define SMALL 1e-18
+#define EPSILON 1e-6
 #define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
 #define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
 #define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
 #define SWAP_NN(x,y) {T tmp=y; y=-x; x=-tmp;}
 
-
+/*
 // Works on little-endian machines only
 inline bool is_nan(T& value ) {
 //	if (((*(uint32_t *) &value) & 0x7fffffff) > 0x7f800000) {
@@ -43,12 +44,14 @@ inline bool is_nan(T& value ) {
 	if (fabs(value) < SMALL) return true;
 	return false;
 }
+*/
 
 inline T sanitize_denormal(T value) {
-	if (is_nan(value)) {
+	if (isnan(value)) {
 		fprintf(stderr,"Broken number ( %e )\n",value);
-		if (fabs(value) > BIG) {return BIG;}
-		if (fabs(value) < SMALL) {return SMALL;}
+		return SMALL;
+		//if (fabs(value) > BIG) {return BIG;}
+		//if (fabs(value) < SMALL) {return SMALL;}
 	}
 	return value;
 }
@@ -171,8 +174,22 @@ T fg(Valve2 v, T vg) {
 	return (v.ag-v.r0g*v.gg*powf(log(1.0+exp(v.cg*vg))/v.cg,v.e)+v.ig0-vg);
 }
 
+T fgdash(Valve2 v, T vg) {
+	T a = exp(v.cg*vg);
+	T b = -v.e*powf(log(a+1.0)/v.cg,v.e);
+	T c = v.cg*a/(a+1.0)*v.gg*v.r0g;
+	return (b*c/log(a+1.0));
+}
+
 T fp(Valve2 v, T vp) {
-	return (-v.r0p*(v.g*powf(log(1.0+exp(v.c*(vp/v.mu+v.vg)))/v.c,v.gamma))+v.ap-vp);
+	return (v.r0p*((v.g*powf(log(1.0+exp(v.c*(vp/v.mu+v.vg)))/v.c,v.gamma))-(v.vg-v.ag)/v.r0g)+v.ap-vp);
+}
+
+T fpdash(Valve2 v, T vp) {
+	T a = exp(v.c*(v.vg+vp/v.mu));
+	T b = v.c*a/(v.mu*(a+1.0));
+	T c = v.g*v.gamma*v.r0p*powf(log(a+1.0)/v.c,v.gamma);
+	return (c*b/log(a+1.0));
 }
 
 T fk(Valve2 v) {
@@ -180,35 +197,69 @@ T fk(Valve2 v) {
 }
 
 T secantfg(Valve2 v, T *i1, T *i2) {
-        T tolerance = 1e-8;
         T vgn = 0.0;
         for (int i = 0; i<50; ++i) {
                 vgn = *i1 - fg(v,*i1)*(*i1-*i2)/(fg(v,*i1)-fg(v,*i2));
                 *i1 = *i2;
                 *i2 = vgn;
-                if (sanitize_denormal(fabs(fg(v,vgn))) < tolerance) break;
+                if ((fabs(fg(v,vgn))) < EPSILON) break;
         }
+	if ((fabs(fp(v,vgn)) >= EPSILON))
+		fprintf(stderr,"Vg did not converge\n");
         return vgn;
 }
 
+T newtonfg(Valve2 v, T *i1) {
+	T init = *i1;
+	if (fabs(fg(v,*i1)) < EPSILON || fgdash(v,*i1)==0.0) return *i1;
+	T vgn = 0.0;
+	for (int i = 0; i<50; ++i) {
+		vgn = *i1 - fg(v,*i1)/fgdash(v,*i1);
+		*i1 = vgn;
+		if (fabs(fg(v,vgn)) < EPSILON) break;
+	}
+	if ((fabs(fg(v,vgn)) >= EPSILON)) {
+		vgn = init - v.ig0;
+		fprintf(stderr,"Vg did not converge\n");
+        }
+	return sanitize_denormal(vgn);
+}
+
+T newtonfp(Valve2 v, T *i1) {
+	T init = *i1;
+	if (fabs(fp(v,*i1)) < EPSILON || fpdash(v,*i1)==0.0) return *i1;
+	T vpn = 0.0;
+	for (int i = 0; i<50; ++i) {
+		vpn = *i1 - fp(v,*i1)/fpdash(v,*i1);
+		*i1 = vpn;
+		if (fabs(fp(v,vpn)) < EPSILON) break;
+	}
+	if ((fabs(fp(v,vpn)) >= EPSILON)) {
+		vpn = init;
+		fprintf(stderr,"Vp did not converge\n");
+        }
+	return sanitize_denormal(vpn);
+}
 
 T secantfp(Valve2 v, T *i1, T *i2) {
-        T tolerance = 1e-8;
         T vpn = 0.0;
         for (int i = 0; i<50; ++i) {
                 vpn = *i1 - fp(v,*i1)*(*i1-*i2)/(fp(v,*i1)-fp(v,*i2));
                 *i1 = *i2;
                 *i2 = vpn;
-                if (sanitize_denormal(fabs(fp(v,vpn))) < tolerance) break;
+                if ((fabs(fp(v,vpn))) < EPSILON) break;
         }
-        return vpn;
+	
+	if ((fabs(fp(v,vpn)) >= EPSILON))
+		fprintf(stderr,"Vp did not converge\n");
+	return vpn;
 }
 
 int main(){ 
 	T Fs = 48000.0;
 	T N = Fs/2.0;
-	T gain = 2.0;
-	T f0 = 1000.0;
+	T gain = 4.0;
+	T f0 = 1001.0;
 	T input[38400] = { 0.0 };
 	T output[38400] = { 0.0 };
 	int i;
@@ -224,7 +275,7 @@ int main(){
 	T rp = 100e3;
 	T rg = 20e3;
 	T ri = 1000e3;
-	T rk = 1000; //from paper
+	T rk = 100; //from paper
 	T e = 250.0;
 	T wmax = 20.0;
 
@@ -297,12 +348,9 @@ int main(){
 	v.cg = 9.901;
 	v.ig0 = 8.025e-8;
 
-	I1.waveUp();
-	I3.waveUp();
 	I1.WD = 0.0;
 	I3.WD = 0.0;
 	P2.WD = 0.0;
-	
 	DUMP(printf("0j\t  Vi\t  Ro\t  Vg\t  Vk\t  Vp\t  Ri\t  Rk\t  Rg\t  E\t  Co\t  Ck\t  EA\t  RoA\t  Ig\t  Ik\t  Ip\n"));
 	
 	for (int j = 0; j < N; ++j) {
@@ -310,9 +358,13 @@ int main(){
 		I1.waveUp();
 		I3.waveUp();
 		P2.waveUp();
-		v.ag = I1.WU;
-		v.ak = I3.WU;
-		v.ap = P2.WU;
+		v.ag = -I1.WU;
+		v.ak = -I3.WU;
+		v.ap = -P2.WU;
+		I1.WU = v.ag;
+		I3.WU = v.ak;
+		P2.WU = v.ap;
+
 		v.r0g = I1.PortRes;
 		v.r0k = I3.PortRes;
 		v.r0p = P2.PortRes;
@@ -328,23 +380,29 @@ int main(){
 		vg0 = v.ag;
 		vg1 = v.ag + fg(v, v.ag);
 		v.vg = secantfg(v, &vg0, &vg1);
-		
+		//v.vg = newtonfg(v, &vg0);
+
 		vp0 = v.ap;
 		vp1 = v.ap + fp(v, v.ap);
 		v.vp = secantfp(v, &vp0, &vp1);
+		//v.vp = newtonfp(v, &vp0);
+
+		//if (v.vp > 250.0) v.vp = fabs(250.0-v.vp);
 
 		v.vk = fk(v);
 
 		v.bg = 2.0*v.vg-v.ag;
 		v.bp = 2.0*v.vp-v.ap;
 		v.bk = 2.0*v.vk-v.ak;
-		
+
+		//fprintf(stderr,"%f %f %f :g %f %f :p %f %f :k %f %f\n",v.vg, v.vp, v.vk, v.ag, v.bg, v.ap, v.bp, v.ak, v.bk);
+		I3.setWD(v.bk);
+
 		I1.setWD(v.bg);
 		P2.setWD(v.bp);	
-		I3.setWD(v.bk);
 		
 		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ak,I3.WU, v.bk,I3.WD);
-		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(), v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
+		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(),I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
 	}
 }
 
