@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 #define BIG 1e11
 #define SMALL 1e-18
-#define EPSILON 1e-6
+#define EPSILON 1e-9
 #define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
 #define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
 #define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
@@ -204,7 +204,7 @@ T secantfg(Valve2 v, T *i1, T *i2) {
                 *i2 = vgn;
                 if ((fabs(fg(v,vgn))) < EPSILON) break;
         }
-	if ((fabs(fp(v,vgn)) >= EPSILON))
+	if ((fabs(fg(v,vgn)) >= EPSILON))
 		fprintf(stderr,"Vg did not converge\n");
         return vgn;
 }
@@ -385,7 +385,7 @@ int main(){
 		//v.vg = newtonfg(v, &vg0);
 
 		vp0 = v.ap;
-		vp1 = v.ap - fp(v, v.ap);
+		vp1 = v.ap + fp(v, v.ap);
 		v.vp = secantfp(v, &vp0, &vp1);
 
 		//T Ip = (v.ap - v.vp)/v.r0p;
