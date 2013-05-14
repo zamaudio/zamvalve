@@ -309,12 +309,14 @@ int main(){
 //Official
 	ser S0 = ser(&Ci, &Vi);
 	inv I0 = inv(&S0);
-	par P0 = par(&I0, &Ri);
-	ser S1 = ser(&Rg, &P0);
+	inv RRi = inv(&Ri);
+	par P0 = par(&I0, &RRi);
+	inv RRg = inv(&Rg);
+	ser S1 = ser(&RRg, &P0);
 	inv I1 = inv(&S1);
 
-	par I3 = par(&Ck, &Rk);
-//	inv I3 = inv(&S3);
+	par S3 = par(&Ck, &Rk);
+	inv I3 = inv(&S3);
 
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
@@ -411,6 +413,11 @@ int main(){
 		SWAP_NN(v.ag,v.bg);
 		SWAP_NN(I1.WU,I1.WD);
 
+		v.ak = -I3.WU;
+		I3.WU = v.ak;
+		SWAP_NN(v.ak,v.bk);
+		SWAP_NN(I3.WU,I3.WD);
+		
 		//P2.WD = P2.WD;	
 		//SWAP_PP(P2.WU,v.ap);
 		
