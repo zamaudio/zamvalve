@@ -182,7 +182,7 @@ T fgdash(Valve2 v, T vg) {
 }
 
 T fp(Valve2 v, T vp) {
-	return (v.r0p*((v.g*powf(log(1.0+exp(v.c*(vp/v.mu+v.vg)))/v.c,v.gamma))-(v.vg-v.ag)/v.r0g)+v.ap-vp);
+	return (v.r0p*((v.g*powf(log(1.0+exp(v.c*(vp/v.mu+v.vg)))/v.c,v.gamma))-(v.ag-v.vg)/v.r0g)+v.ap-vp);
 }
 
 T fpdash(Valve2 v, T vp) {
@@ -193,7 +193,7 @@ T fpdash(Valve2 v, T vp) {
 }
 
 T fk(Valve2 v) {
-	return (v.ak + v.r0k*((v.vp-v.ap)/v.r0p+(v.vg-v.ag)/v.r0g));
+	return (v.ak - v.r0k*((v.vp-v.ap)/v.r0p+(v.vg-v.ag)/v.r0g));
 }
 
 T secantfg(Valve2 v, T *i1, T *i2) {
@@ -258,7 +258,7 @@ T secantfp(Valve2 v, T *i1, T *i2) {
 int main(){ 
 	T Fs = 48000.0;
 	T N = Fs/2.0;
-	T gain = 4.0;
+	T gain = 10.0;
 	T f0 = 1001.0;
 	T input[38400] = { 0.0 };
 	T output[38400] = { 0.0 };
@@ -383,8 +383,12 @@ int main(){
 		//v.vg = newtonfg(v, &vg0);
 
 		vp0 = v.ap;
-		vp1 = v.ap + fp(v, v.ap);
+		vp1 = v.ap - fp(v, v.ap);
 		v.vp = secantfp(v, &vp0, &vp1);
+
+		//T Ip = (v.ap - v.vp)/v.r0p;
+		//v.vp = v.ap - v.r0p*(-Ip);
+
 		//v.vp = newtonfp(v, &vp0);
 
 		//if (v.vp > 250.0) v.vp = fabs(250.0-v.vp);
@@ -396,12 +400,21 @@ int main(){
 		v.bk = 2.0*v.vk-v.ak;
 
 		//fprintf(stderr,"%f %f %f :g %f %f :p %f %f :k %f %f\n",v.vg, v.vp, v.vk, v.ag, v.bg, v.ap, v.bp, v.ak, v.bk);
-		I3.setWD(v.bk);
+		I3.setWD(-v.bk);
 
-		I1.setWD(v.bg);
+		I1.setWD(-v.bg);
+		//SWAP_NP(v.bp,v.ap);
 		P2.setWD(v.bp);	
 		
-		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ak,I3.WU, v.bk,I3.WD);
+		v.ag = -I1.WU;
+		I1.WU = v.ag;
+		SWAP_NN(v.ag,v.bg);
+		SWAP_NN(I1.WU,I1.WD);
+
+		//P2.WD = P2.WD;	
+		//SWAP_PP(P2.WU,v.ap);
+		
+		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current(),v.ap,P2.WU, v.bp,P2.WD);
 		printf("1%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(),I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), I1.Current(),I3.Current(),P2.Current());
 	}
 }
