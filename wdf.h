@@ -1,5 +1,5 @@
 /*
-wdf.cpp
+wdf.h
 Copyright (C) 2013  Damien Zammit
 
 This program is free software; you can redistribute it and/or
@@ -21,7 +21,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define PASSTHROUGH 1
 #define THREEPORT 2
 
-#if 1
+#define max(x,y) (( (x) > (y) ) ? x : y )
+#define min(x,y) (( (x) < (y) ) ? x : y )
+#define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
+#define BIG 1e12
+#define SMALL 1e-14
+#define EPSILON 1e-7
+#define ITER 50
+#define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
+#define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
+#define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
+#define SWAP_NN(x,y) {T tmp=y; y=-x; x=-tmp;}
+
+#if 0
 #define DUMP(x) x
 #else
 #define DUMP(x)
@@ -40,13 +52,31 @@ public:
 	T state;
 	char type;
 
-	virtual T waveUp() = 0;
+	virtual T waveUp() {};
 	virtual void setWD(T waveparent);
 };
 
 class OnePort : public WDF {
 public:
 	void setWD(T waveparent);
+};
+
+class Triode {
+public:
+	WDF G, K, P;
+
+        T vg, vk, vp;
+        T g, mu, gamma, c, gg, e, cg, ig0;
+
+	T fg(T VG);
+	T fgdash(T VG);
+	T fp(T VP);
+	T fpdash(T VP);
+	T fk();
+	T secantfg(T *i1, T *i2);
+	T newtonfg(T *i1);
+	T secantfp(T *i1, T *i2);
+	T newtonfp(T *i1);
 };
 
 class Adaptor : public OnePort {
@@ -149,7 +179,6 @@ template <class Port1, class Port2>par::par(Port1 *l, Port2 *r) : Adaptor(THREEP
 
 T par::waveUp() {
 	T G23 = 1.0 / left->PortRes + 1.0 / right->PortRes;
-	//Adaptor::WU = (1.0 / left->PortRes)/G23*left->waveUp() + (1.0 / right->PortRes)/G23*right->waveUp();
 	WDF::WU = (1.0 / left->PortRes)/G23*left->waveUp() + (1.0 / right->PortRes)/G23*right->waveUp();
 	DUMP(printf("UP\tpar\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
 	return WU;
@@ -238,5 +267,90 @@ T V::waveUp() {
 	WU = 2.0*e - WD;
 	DUMP(printf("UP\tV\tWU=%f\tWD=%f\tV=%f\n",WU, WD,(WD+WU)/2.0));
 	return WU;
+}
+
+T Triode::fg(T VG) {
+        return (G.WD-G.PortRes*gg*powf(log(1.0+exp(cg*VG))/cg,e)+ig0-VG);
+}
+
+T Triode::fgdash(T VG) {
+        T a1 = exp(cg*VG);
+        T b1 = -e*powf(log(a1+1.0)/cg,e);
+        T c1 = cg*a1/(a1+1.0)*gg*G.PortRes;
+        return (b1*c1/log(a1+1.0));
+}
+
+T Triode::fp(T VP) {
+        return (P.PortRes*((g*powf(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))-(G.WD-vg)/G.PortRes)+P.WD-VP);
+}
+
+T Triode::fpdash(T VP) {
+        T a1 = exp(c*(vg+VP/mu));
+        T b1 = c*a1/(mu*(a1+1.0));
+        T c1 = g*gamma*P.PortRes*powf(log(a1+1.0)/c,gamma);
+        return (c1*b1/log(a1+1.0));
+}
+
+T Triode::fk() {
+        return (K.WD - K.PortRes*((vp-P.WD)/P.PortRes + (vg-G.WD)/G.PortRes));
+}
+
+T Triode::secantfg(T *i1, T *i2) {
+        T vgn = 0.0;
+        for (int i = 0; i<ITER; ++i) {
+                vgn = *i1 - fg(*i1)*(*i1-*i2)/(fg(*i1)-fg(*i2));
+                *i1 = *i2;
+                *i2 = vgn;
+                if ((fabs(fg(vgn))) < EPSILON) break;
+        }
+        if ((fabs(fg(vgn)) >= EPSILON))
+                DUMP(fprintf(stderr,"Vg did not converge\n"));
+        return vgn; 
+}               
+        
+T Triode::newtonfg(T *i1) {
+        T init = *i1;
+        if (fabs(fg(*i1)) < EPSILON || fgdash(*i1)==0.0) return *i1;
+        T vgn = 0.0;
+        for (int i = 0; i<ITER; ++i) {
+                vgn = *i1 - fg(*i1)/fgdash(*i1);
+                *i1 = vgn;
+                if (fabs(fg(vgn)) < EPSILON) break;
+        } 
+        if ((fabs(fg(vgn)) >= EPSILON)) {
+                vgn = init;
+                DUMP(fprintf(stderr,"Vg did not converge\n"));
+        }       
+        return vgn;
+}
+
+T Triode::newtonfp(T *i1) {
+        T init = *i1;
+        if (fabs(fp(*i1)) < EPSILON || fpdash(*i1)==0.0) return *i1;
+        T vpn = 0.0;
+        for (int i = 0; i<ITER; ++i) {
+                vpn = *i1 - fp(*i1)/fpdash(*i1);
+                *i1 = vpn;
+                if (fabs(fp(vpn)) < EPSILON) break;
+        }
+        if ((fabs(fp(vpn)) >= EPSILON)) {
+                vpn = init;
+                DUMP(fprintf(stderr,"Vp did not converge\n"));
+        }
+        return vpn;
+}
+
+T Triode::secantfp(T *i1, T *i2) {
+        T vpn = 0.0;
+        for (int i = 0; i<ITER; ++i) {
+                vpn = *i1 - fp(*i1)*(*i1-*i2)/(fp(*i1)-fp(*i2));
+                *i1 = *i2;
+                *i2 = vpn;
+                if ((fabs(fp(vpn))) < EPSILON) break;
+        }
+
+        if ((fabs(fp(vpn)) >= EPSILON))
+                DUMP(fprintf(stderr,"Vp did not converge\n"));
+        return vpn;
 }
 
