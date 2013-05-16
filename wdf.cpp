@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <math.h>
 #include "wdf.h"
 
+#define TOLERANCE 1e-8
+
 inline T sanitize_denormal(T value) {
 	if (isnan(value) || isinf(value)) {
 		DUMP(fprintf(stderr,"Broken number ( %e )\n",value));
@@ -35,7 +37,7 @@ inline T sanitize_denormal(T value) {
 int main(){ 
 	T Fs = 48000.0;
 	T N = Fs/3;
-	T gain = 3.0;
+	T gain = 0.4;
 	T f0 = 1001.0;
 	T input[48000] = { 0.0 };
 	int i;
@@ -151,9 +153,9 @@ int main(){
 		I1.waveUp();
 		I3.waveUp();
 		P2.waveUp();
-		v.G.WD = I1.WU;  //invert polarity for root node 
-		v.K.WD = I3.WU;  //invert polarity for root node
-		v.P.WD = P2.WU;  //invert polarity for root node
+		v.G.WD = I1.WU;
+		v.K.WD = I3.WU; 
+		v.P.WD = P2.WU;
 	v.vg = v.G.WD;
 	v.vk = v.K.WD;
 	v.vp = v.P.WD;
@@ -164,21 +166,19 @@ int main(){
 		//Step 3: compute wave reflections inside the triode
 		T vg0, vg1, vp0, vp1;
 
-		
-		vg0 = v.vg;
-		vg1 = vg0 - v.fg(vg0);
+		vg0 = -e;
+		vg1 = e;
+		v.vg = v.zeroffg(vg0,vg1,TOLERANCE);
 	//	v.vg = v.secantfg(&vg0, &vg1);
-		v.vg = v.newtonfg(&vg0);
-		v.vg = sanitize_denormal(v.vg);
+	//	v.vg = v.newtonfg(&vg0);
 
-		vp0 = v.vp;
-		vp1 = vp0 + v.fp(vp0);
+		vp0 = -e;
+		vp1 = e;
+		v.vp = v.zeroffp(vp0,vp1,TOLERANCE);
 	//	v.vp = v.secantfp(&vp0, &vp1);
-		v.vp = v.newtonfp(&vp0);
-		v.vp = sanitize_denormal(v.vp);
+	//	v.vp = v.newtonfp(&vp0);
 
-		v.vk = v.fk();
-		v.vk = sanitize_denormal(v.vk);
+		v.vk = v.ffk();
 
 		v.G.WU = 2.0*v.vg-v.G.WD;
 		v.K.WU = 2.0*v.vk-v.K.WD;
@@ -187,13 +187,9 @@ int main(){
 //		fprintf(stderr,"%f %f %f :g %f %f :p %f %f :k %f %f\n",v.vg, v.vp, v.vk, v.G.WD, v.G.WU, v.P.WD, v.P.WU, v.K.WD, v.K.WU);
 
 		//Step 4: push new waves down from the triode element
-		I1.WD = v.G.WU;  //invert polarity for root node
-		I3.WD = v.K.WU;  //invert polarity for root node
-		P2.WD = v.P.WU;   //inverting this causes NaN output
-		
-		I1.setWD(I1.WD);
-		I3.setWD(I3.WD);
-		P2.setWD(P2.WD); 
+		I1.setWD(v.G.WU);
+		I3.setWD(v.K.WU);
+		P2.setWD(v.P.WU); 
 	
 		
 		//Step 5: save triode voltages for next loop - not necessary

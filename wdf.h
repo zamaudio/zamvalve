@@ -68,15 +68,23 @@ public:
         T vg, vk, vp;
         T g, mu, gamma, c, gg, e, cg, ig0;
 
-	T fg(T VG);
+	T ffg(T VG);
 	T fgdash(T VG);
-	T fp(T VP);
+	T ffp(T VP);
 	T fpdash(T VP);
-	T fk();
+	T ffk();
 	T secantfg(T *i1, T *i2);
 	T newtonfg(T *i1);
 	T secantfp(T *i1, T *i2);
 	T newtonfp(T *i1);
+	
+	//Brent's method
+	T r8_abs ( T x );
+	T r8_epsilon ( );
+	T r8_max ( T x, T y );
+	T r8_sign ( T x );
+	T zeroffp ( T a, T b, T t );
+	T zeroffg ( T a, T b, T t );
 };
 
 class Adaptor : public OnePort {
@@ -269,32 +277,32 @@ T V::waveUp() {
 	return WU;
 }
 
-T Triode::fg(T VG) {
-        return (G.WD-G.PortRes*(gg*powf(log(1.0+exp(cg*VG))/cg,e)+ig0)-VG);
+T Triode::ffg(T VG) {
+        return (G.WD-G.PortRes*(gg*pow(log(1.0+exp(cg*VG))/cg,e)+ig0)-VG);
 }
 
 T Triode::fgdash(T VG) {
         T a1 = exp(cg*VG);
-        T b1 = -e*powf(log(a1+1.0)/cg,e-1.0);
+        T b1 = -e*pow(log(a1+1.0)/cg,e-1.0);
         T c1 = a1/(a1+1.0)*gg*G.PortRes;
         return (b1*c1);
 }
 
-T Triode::fp(T VP) { 
-	return (P.WD+P.PortRes*((g*powf(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
+T Triode::ffp(T VP) { 
+	return (P.WD+P.PortRes*((g*pow(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
 }	//	    ^
 
 T Triode::fpdash(T VP) {
         T a1 = exp(c*(vg+VP/mu));
         T b1 = a1/(mu*(a1+1.0));
-        T c1 = g*gamma*P.PortRes*powf(log(a1+1.0)/c,gamma-1.0);
+        T c1 = g*gamma*P.PortRes*pow(log(a1+1.0)/c,gamma-1.0);
         return (c1*b1);
 }
 
-T Triode::fk() {
-        return (K.WD - K.PortRes*(g*powf(log(1.0+exp(c*(vp/mu+vg)))/c,gamma)));
+T Triode::ffk() {
+        return (K.WD - K.PortRes*(g*pow(log(1.0+exp(c*(vp/mu+vg)))/c,gamma)));
 }
-
+/*
 T Triode::secantfg(T *i1, T *i2) {
         T vgn = 0.0;
         T init = *i1;
@@ -356,4 +364,331 @@ T Triode::secantfp(T *i1, T *i2) {
                 DUMP(fprintf(stderr,"Vp did not converge\n"));
         return vpn;
 }
+*/
 
+//****************************************************************************80
+//	Purpose:
+//
+//		Brent's method root finder.
+//
+//	Licensing:
+//
+//		This code below is distributed under the GNU LGPL license.
+//
+//	Author:
+//
+//		Original FORTRAN77 version by Richard Brent.
+//		C++ version by John Burkardt.
+//		Adapted for zamvalve by Damien Zammit.
+
+T Triode::r8_abs ( T x )
+{
+	T value;
+
+	if ( 0.0 <= x )
+	{
+		value = x;
+	}
+	else
+	{
+		value = - x;
+	}
+	return value;
+}
+
+T Triode::r8_epsilon ( )
+{
+	T r;
+
+	r = 1.0;
+
+	while ( 1.0 < ( T ) ( 1.0 + r )	)
+	{
+		r = r / 2.0;
+	}
+
+	return ( 2.0 * r );
+}
+
+T Triode::r8_max ( T x, T y )
+{
+	T value;
+
+	if ( y < x )
+	{
+		value = x;
+	}
+	else
+	{
+		value = y;
+	}
+	return value;
+}
+
+T Triode::r8_sign ( T x )
+{
+	T value;
+
+	if ( x < 0.0 )
+	{
+		value = -1.0;
+	}
+	else
+	{
+		value = 1.0;
+	}
+	return value;
+}
+
+
+T Triode::zeroffp ( T a, T b, T t )
+{
+	T c;
+	T d;
+	T e;
+	T fa;
+	T fb;
+	T fc;
+	T m;
+	T macheps;
+	T p;
+	T q;
+	T r;
+	T s;
+	T sa;
+	T sb;
+	T tol;
+//
+//	Make local copies of A and B.
+//
+	sa = a;
+	sb = b;
+	fa = ffp ( sa );
+	fb = ffp ( sb );
+
+	c = sa;
+	fc = fa;
+	e = sb - sa;
+	d = e;
+
+	macheps = r8_epsilon ( );
+
+	for ( ; ; )
+	{
+		if ( r8_abs ( fc ) < r8_abs ( fb ) )
+		{
+			sa = sb;
+			sb = c;
+			c = sa;
+			fa = fb;
+			fb = fc;
+			fc = fa;
+		}
+
+		tol = 2.0 * macheps * r8_abs ( sb ) + t;
+		m = 0.5 * ( c - sb );
+
+		if ( r8_abs ( m ) <= tol || fb == 0.0 )
+		{
+			break;
+		}
+
+		if ( r8_abs ( e ) < tol || r8_abs ( fa ) <= r8_abs ( fb ) )
+		{
+			e = m;
+			d = e;
+		}
+		else
+		{
+			s = fb / fa;
+
+			if ( sa == c )
+			{
+				p = 2.0 * m * s;
+				q = 1.0 - s;
+			}
+			else
+			{
+				q = fa / fc;
+				r = fb / fc;
+				p = s * ( 2.0 * m * q * ( q - r ) - ( sb - sa ) * ( r - 1.0 ) );
+				q = ( q - 1.0 ) * ( r - 1.0 ) * ( s - 1.0 );
+			}
+
+			if ( 0.0 < p )
+			{
+				q = - q;
+			}
+			else
+			{
+				p = - p;
+			}
+
+			s = e;
+			e = d;
+
+			if ( 2.0 * p < 3.0 * m * q - r8_abs ( tol * q ) &&
+				p < r8_abs ( 0.5 * s * q ) )
+			{
+				d = p / q;
+			}
+			else
+			{
+				e = m;
+				d = e;
+			}
+		}
+		sa = sb;
+		fa = fb;
+
+		if ( tol < r8_abs ( d ) )
+		{
+			sb = sb + d;
+		}
+		else if ( 0.0 < m )
+		{
+			sb = sb + tol;
+		}
+		else
+		{
+			sb = sb - tol;
+		}
+
+		fb = ffp ( sb );
+
+		if ( ( 0.0 < fb && 0.0 < fc ) || ( fb <= 0.0 && fc <= 0.0 ) )
+		{
+			c = sa;
+			fc = fa;
+			e = sb - sa;
+			d = e;
+		}
+	}
+	return sb;
+}
+
+T Triode::zeroffg ( T a, T b, T t )
+{
+	T c;
+	T d;
+	T e;
+	T fa;
+	T fb;
+	T fc;
+	T m;
+	T macheps;
+	T p;
+	T q;
+	T r;
+	T s;
+	T sa;
+	T sb;
+	T tol;
+//
+//	Make local copies of A and B.
+//
+	sa = a;
+	sb = b;
+	fa = ffg ( sa );
+	fb = ffg ( sb );
+
+	c = sa;
+	fc = fa;
+	e = sb - sa;
+	d = e;
+
+	macheps = r8_epsilon ( );
+
+	for ( ; ; )
+	{
+		if ( r8_abs ( fc ) < r8_abs ( fb ) )
+		{
+			sa = sb;
+			sb = c;
+			c = sa;
+			fa = fb;
+			fb = fc;
+			fc = fa;
+		}
+
+		tol = 2.0 * macheps * r8_abs ( sb ) + t;
+		m = 0.5 * ( c - sb );
+
+		if ( r8_abs ( m ) <= tol || fb == 0.0 )
+		{
+			break;
+		}
+
+		if ( r8_abs ( e ) < tol || r8_abs ( fa ) <= r8_abs ( fb ) )
+		{
+			e = m;
+			d = e;
+		}
+		else
+		{
+			s = fb / fa;
+
+			if ( sa == c )
+			{
+				p = 2.0 * m * s;
+				q = 1.0 - s;
+			}
+			else
+			{
+				q = fa / fc;
+				r = fb / fc;
+				p = s * ( 2.0 * m * q * ( q - r ) - ( sb - sa ) * ( r - 1.0 ) );
+				q = ( q - 1.0 ) * ( r - 1.0 ) * ( s - 1.0 );
+			}
+
+			if ( 0.0 < p )
+			{
+				q = - q;
+			}
+			else
+			{
+				p = - p;
+			}
+
+			s = e;
+			e = d;
+
+			if ( 2.0 * p < 3.0 * m * q - r8_abs ( tol * q ) &&
+				p < r8_abs ( 0.5 * s * q ) )
+			{
+				d = p / q;
+			}
+			else
+			{
+				e = m;
+				d = e;
+			}
+		}
+		sa = sb;
+		fa = fb;
+
+		if ( tol < r8_abs ( d ) )
+		{
+			sb = sb + d;
+		}
+		else if ( 0.0 < m )
+		{
+			sb = sb + tol;
+		}
+		else
+		{
+			sb = sb - tol;
+		}
+
+		fb = ffg ( sb );
+
+		if ( ( 0.0 < fb && 0.0 < fc ) || ( fb <= 0.0 && fc <= 0.0 ) )
+		{
+			c = sa;
+			fc = fa;
+			e = sb - sa;
+			d = e;
+		}
+	}
+	return sb;
+}
