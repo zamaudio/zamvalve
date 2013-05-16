@@ -26,8 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 #define BIG 1e12
 #define SMALL 1e-14
-#define EPSILON 1e-7
-#define ITER 50
+#define EPSILON 1e-11
+#define ITER 500
 #define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
 #define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
 #define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
@@ -270,7 +270,7 @@ T V::waveUp() {
 }
 
 T Triode::fg(T VG) {
-        return (G.WD-G.PortRes*gg*powf(log(1.0+exp(cg*VG))/cg,e)+ig0-VG);
+        return (G.WD-G.PortRes*(gg*powf(log(1.0+exp(cg*VG))/cg,e)+ig0)-VG);
 }
 
 T Triode::fgdash(T VG) {
@@ -280,9 +280,9 @@ T Triode::fgdash(T VG) {
         return (b1*c1/log(a1+1.0));
 }
 
-T Triode::fp(T VP) {
-        return (P.PortRes*((g*powf(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))-(G.WD-vg)/G.PortRes)+P.WD-VP);
-}
+T Triode::fp(T VP) { 
+	return (P.WD-P.PortRes*((g*powf(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
+}	//	    ^
 
 T Triode::fpdash(T VP) {
         T a1 = exp(c*(vg+VP/mu));
@@ -292,7 +292,7 @@ T Triode::fpdash(T VP) {
 }
 
 T Triode::fk() {
-        return (K.WD - K.PortRes*((vp-P.WD)/P.PortRes + (vg-G.WD)/G.PortRes));
+        return (K.WD - K.PortRes*(g*powf(log(1.0+exp(c*(vp/mu+vg)))/c,gamma)));
 }
 
 T Triode::secantfg(T *i1, T *i2) {

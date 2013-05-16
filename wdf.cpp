@@ -44,17 +44,17 @@ int main(){
 	}
 
 	// Passive components
-	T ci = 100e-9;
-	T ck = 10e-6;
-	T co = 10e-9;
-	T ro = 1000e3;
-	T rp = 100e3;
-	T rg = 20e3;
-	T ri = 1000e3;
-	T rk = 1e3;
-	T e = 250.0;
+	T ci = 0.0000001;	//100nF
+	T ck = 0.00001;		//10uF
+	T co = 0.00000001;	//10nF
+	T ro = 1000000.0;	//1Mohm
+	T rp = 100000.0;	//100kohm
+	T rg = 20000.0;		//20kohm
+	T ri = 1000000.0;	//1Mohm
+	T rk = 1000.0;		//1kohm
+	T e = 250.0;		//250V
 
-	V Vi = V(0.0,1e3);
+	V Vi = V(0.0,1000.0);	//1kohm internal resistance
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -64,7 +64,7 @@ int main(){
 	R Rk = R(rk);
 	V E = V(e, rp);
 
-#if 1
+#if 0
 //Mod
 /*
 	//->Gate
@@ -96,6 +96,7 @@ int main(){
 
 	ser S2 = ser(&Co, &Ro);
 	inv I4 = inv(&S2);
+	//inv EE = inv(&E);
 	par P2 = par(&I4, &E);
 
 #else
@@ -150,9 +151,9 @@ int main(){
 		I1.waveUp();
 		I3.waveUp();
 		P2.waveUp();
-		v.G.WD = -I1.WU;  //invert polarity for root node 
-		v.K.WD = -I3.WU;  //invert polarity for root node
-		v.P.WD = -P2.WU;  //invert polarity for root node
+		v.G.WD = I1.WU;  //invert polarity for root node 
+		v.K.WD = I3.WU;  //invert polarity for root node
+		v.P.WD = P2.WU;  //invert polarity for root node
 		v.G.PortRes = I1.PortRes;
 		v.K.PortRes = I3.PortRes;
 		v.P.PortRes = P2.PortRes;
@@ -160,38 +161,34 @@ int main(){
 		//Step 3: compute wave reflections inside the triode
 		T vg0, vg1, vp0, vp1;
 
+		
 		vg0 = v.vg;
 		vg1 = vg0 + v.fg(vg0);
 		v.vg = v.secantfg(&vg0, &vg1);
 		//v.vg = v.newtonfg(&vg0);
-		v.vg = sanitize_denormal(v.vg);
 
 		vp0 = v.vp;
 		vp1 = vp0 + v.fp(vp0);
 		v.vp = v.secantfp(&vp0, &vp1);
 		//v.vp = v.newtonfp(&vp0);
-		v.vp = sanitize_denormal(v.vp);
-
-		//T Ip = (v.P.WD - v.vp)/v.P.PortRes;
-		//v.vp = v.P.WD - v.P.PortRes*(-Ip);
 
 		v.vk = v.fk();
-		v.vk = sanitize_denormal(v.vk);
 
 		v.G.WU = 2.0*v.vg-v.G.WD;
 		v.K.WU = 2.0*v.vk-v.K.WD;
 		v.P.WU = 2.0*v.vp-v.P.WD;
 
-		//fprintf(stderr,"%f %f %f :g %f %f :p %f %f :k %f %f\n",v.vg, v.vp, v.vk, v.ag, v.bg, v.ap, v.bp, v.ak, v.bk);
+//		fprintf(stderr,"%f %f %f :g %f %f :p %f %f :k %f %f\n",v.vg, v.vp, v.vk, v.G.WD, v.G.WU, v.P.WD, v.P.WU, v.K.WD, v.K.WU);
 
 		//Step 4: push new waves down from the triode element
-		I1.WD = -v.G.WU;  //invert polarity for root node
-		I3.WD = -v.K.WU;  //invert polarity for root node
+		I1.WD = v.G.WU;  //invert polarity for root node
+		I3.WD = v.K.WU;  //invert polarity for root node
 		P2.WD = v.P.WU;   //inverting this causes NaN output
 		
 		I1.setWD(I1.WD);
 		I3.setWD(I3.WD);
 		P2.setWD(P2.WD); 
+	
 		
 		//Step 5: save triode voltages for next loop - not necessary
 	//	v.vg = v.G.Voltage();
