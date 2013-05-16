@@ -23,9 +23,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "wdf.h"
 
 inline T sanitize_denormal(T value) {
-	if (isnan(value)) {
+	if (isnan(value) || isinf(value)) {
 		DUMP(fprintf(stderr,"Broken number ( %e )\n",value));
-		return SMALL;
+		return 0.0;
 	}
 	return value;
 }
@@ -135,9 +135,9 @@ int main(){
 	I1.waveUp();
 	I3.waveUp();
 	P2.waveUp();
-	v.G.WD = -I1.WU;
-	v.K.WD = -I3.WU;
-	v.P.WD = -P2.WU;
+	v.G.WD = I1.WU;
+	v.K.WD = I3.WU;
+	v.P.WD = P2.WU;
 
 	v.vg = v.G.WD;
 	v.vk = v.K.WD;
@@ -154,6 +154,9 @@ int main(){
 		v.G.WD = I1.WU;  //invert polarity for root node 
 		v.K.WD = I3.WU;  //invert polarity for root node
 		v.P.WD = P2.WU;  //invert polarity for root node
+	v.vg = v.G.WD;
+	v.vk = v.K.WD;
+	v.vp = v.P.WD;
 		v.G.PortRes = I1.PortRes;
 		v.K.PortRes = I3.PortRes;
 		v.P.PortRes = P2.PortRes;
@@ -163,16 +166,19 @@ int main(){
 
 		
 		vg0 = v.vg;
-		vg1 = vg0 + v.fg(vg0);
-		v.vg = v.secantfg(&vg0, &vg1);
-		//v.vg = v.newtonfg(&vg0);
+		vg1 = vg0 - v.fg(vg0);
+	//	v.vg = v.secantfg(&vg0, &vg1);
+		v.vg = v.newtonfg(&vg0);
+		v.vg = sanitize_denormal(v.vg);
 
 		vp0 = v.vp;
 		vp1 = vp0 + v.fp(vp0);
-		v.vp = v.secantfp(&vp0, &vp1);
-		//v.vp = v.newtonfp(&vp0);
+	//	v.vp = v.secantfp(&vp0, &vp1);
+		v.vp = v.newtonfp(&vp0);
+		v.vp = sanitize_denormal(v.vp);
 
 		v.vk = v.fk();
+		v.vk = sanitize_denormal(v.vk);
 
 		v.G.WU = 2.0*v.vg-v.G.WD;
 		v.K.WU = 2.0*v.vk-v.K.WD;

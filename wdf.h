@@ -26,14 +26,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define sign(x) ( (x) >= 0.0 ? 1.0 : -1.0 )
 #define BIG 1e12
 #define SMALL 1e-14
-#define EPSILON 1e-11
-#define ITER 500
+#define EPSILON 1e-9
+#define ITER 50
 #define SWAP_PP(x,y) {T tmp=y; y=x; x=tmp;}
 #define SWAP_PN(x,y) {T tmp=y; y=-x; x=tmp;}
 #define SWAP_NP(x,y) {T tmp=y; y=x; x=-tmp;}
 #define SWAP_NN(x,y) {T tmp=y; y=-x; x=-tmp;}
 
-#if 0
+#if 1
 #define DUMP(x) x
 #else
 #define DUMP(x)
@@ -275,20 +275,20 @@ T Triode::fg(T VG) {
 
 T Triode::fgdash(T VG) {
         T a1 = exp(cg*VG);
-        T b1 = -e*powf(log(a1+1.0)/cg,e);
-        T c1 = cg*a1/(a1+1.0)*gg*G.PortRes;
-        return (b1*c1/log(a1+1.0));
+        T b1 = -e*powf(log(a1+1.0)/cg,e-1.0);
+        T c1 = a1/(a1+1.0)*gg*G.PortRes;
+        return (b1*c1);
 }
 
 T Triode::fp(T VP) { 
-	return (P.WD-P.PortRes*((g*powf(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
+	return (P.WD+P.PortRes*((g*powf(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
 }	//	    ^
 
 T Triode::fpdash(T VP) {
         T a1 = exp(c*(vg+VP/mu));
-        T b1 = c*a1/(mu*(a1+1.0));
-        T c1 = g*gamma*P.PortRes*powf(log(a1+1.0)/c,gamma);
-        return (c1*b1/log(a1+1.0));
+        T b1 = a1/(mu*(a1+1.0));
+        T c1 = g*gamma*P.PortRes*powf(log(a1+1.0)/c,gamma-1.0);
+        return (c1*b1);
 }
 
 T Triode::fk() {
@@ -297,14 +297,17 @@ T Triode::fk() {
 
 T Triode::secantfg(T *i1, T *i2) {
         T vgn = 0.0;
+        T init = *i1;
         for (int i = 0; i<ITER; ++i) {
                 vgn = *i1 - fg(*i1)*(*i1-*i2)/(fg(*i1)-fg(*i2));
-                *i1 = *i2;
-                *i2 = vgn;
+                *i2 = *i1;
+                *i1 = vgn;
                 if ((fabs(fg(vgn))) < EPSILON) break;
         }
-        if ((fabs(fg(vgn)) >= EPSILON))
+        if ((fabs(fg(vgn)) >= EPSILON)) {
                 DUMP(fprintf(stderr,"Vg did not converge\n"));
+		return init;
+	}
         return vgn; 
 }               
         
@@ -318,7 +321,7 @@ T Triode::newtonfg(T *i1) {
                 if (fabs(fg(vgn)) < EPSILON) break;
         } 
         if ((fabs(fg(vgn)) >= EPSILON)) {
-                vgn = init;
+//                vgn = init;
                 DUMP(fprintf(stderr,"Vg did not converge\n"));
         }       
         return vgn;
@@ -334,7 +337,7 @@ T Triode::newtonfp(T *i1) {
                 if (fabs(fp(vpn)) < EPSILON) break;
         }
         if ((fabs(fp(vpn)) >= EPSILON)) {
-                vpn = init;
+//                vpn = init;
                 DUMP(fprintf(stderr,"Vp did not converge\n"));
         }
         return vpn;
@@ -344,8 +347,8 @@ T Triode::secantfp(T *i1, T *i2) {
         T vpn = 0.0;
         for (int i = 0; i<ITER; ++i) {
                 vpn = *i1 - fp(*i1)*(*i1-*i2)/(fp(*i1)-fp(*i2));
-                *i1 = *i2;
-                *i2 = vpn;
+                *i2 = *i1;
+                *i1 = vpn;
                 if ((fabs(fp(vpn))) < EPSILON) break;
         }
 
