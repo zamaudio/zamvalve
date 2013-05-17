@@ -37,7 +37,7 @@ inline T sanitize_denormal(T value) {
 int main(){ 
 	T Fs = 48000.0;
 	T N = Fs/3;
-	T gain = 0.4;
+	T gain = 2.0;
 	T f0 = 1001.0;
 	T input[48000] = { 0.0 };
 	int i;
@@ -56,7 +56,7 @@ int main(){
 	T rk = 1000.0;		//1kohm
 	T e = 250.0;		//250V
 
-	V Vi = V(0.0,1000.0);	//1kohm internal resistance
+	V Vi = V(0.0,10000.0);	//1kohm internal resistance
 	C Ci = C(ci, Fs);
 	C Ck = C(ck, Fs);
 	C Co = C(co, Fs);
@@ -156,9 +156,9 @@ int main(){
 		v.G.WD = I1.WU;
 		v.K.WD = I3.WU; 
 		v.P.WD = P2.WU;
-	v.vg = v.G.WD;
-	v.vk = v.K.WD;
-	v.vp = v.P.WD;
+	//v.vg = v.G.WD;
+	//v.vk = v.K.WD;
+	//v.vp = v.P.WD;
 		v.G.PortRes = I1.PortRes;
 		v.K.PortRes = I3.PortRes;
 		v.P.PortRes = P2.PortRes;
@@ -166,19 +166,22 @@ int main(){
 		//Step 3: compute wave reflections inside the triode
 		T vg0, vg1, vp0, vp1;
 
-		vg0 = -e;
-		vg1 = e;
+		vg0 = -10.0;
+		vg1 = 10.0;
 		v.vg = v.zeroffg(vg0,vg1,TOLERANCE);
 	//	v.vg = v.secantfg(&vg0, &vg1);
 	//	v.vg = v.newtonfg(&vg0);
+//		fprintf(stderr,"vg = %f\n",v.vg);
 
-		vp0 = -e;
-		vp1 = e;
+		vp0 = e;
+		vp1 = 0.0;
 		v.vp = v.zeroffp(vp0,vp1,TOLERANCE);
 	//	v.vp = v.secantfp(&vp0, &vp1);
 	//	v.vp = v.newtonfp(&vp0);
+//		fprintf(stderr,"vp = %f\n",v.vp);
 
 		v.vk = v.ffk();
+		fprintf(stderr,"vk = %f\n",v.vk);
 
 		v.G.WU = 2.0*v.vg-v.G.WD;
 		v.K.WU = 2.0*v.vk-v.K.WD;
@@ -189,7 +192,7 @@ int main(){
 		//Step 4: push new waves down from the triode element
 		I1.setWD(v.G.WU);
 		I3.setWD(v.K.WU);
-		P2.setWD(v.P.WU); 
+		P2.setWD(v.P.WD); 
 	
 		
 		//Step 5: save triode voltages for next loop - not necessary
