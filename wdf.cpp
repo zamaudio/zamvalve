@@ -156,9 +156,9 @@ int main(){
 		v.G.WD = I1.WU;
 		v.K.WD = I3.WU; 
 		v.P.WD = P2.WU;
-	//v.vg = v.G.WD;
-	//v.vk = v.K.WD;
-	//v.vp = v.P.WD;
+	v.vg = v.G.WD;
+	v.vk = v.K.WD;
+	v.vp = v.P.WD;
 		v.G.PortRes = I1.PortRes;
 		v.K.PortRes = I3.PortRes;
 		v.P.PortRes = P2.PortRes;
@@ -183,16 +183,14 @@ int main(){
 		v.vk = v.ffk();
 		fprintf(stderr,"vk = %f\n",v.vk);
 
+
 		v.G.WU = 2.0*v.vg-v.G.WD;
 		v.K.WU = 2.0*v.vk-v.K.WD;
 		v.P.WU = 2.0*v.vp-v.P.WD;
-
+		
 //		fprintf(stderr,"%f %f %f :g %f %f :p %f %f :k %f %f\n",v.vg, v.vp, v.vk, v.G.WD, v.G.WU, v.P.WD, v.P.WU, v.K.WD, v.K.WU);
 
 		//Step 4: push new waves down from the triode element
-		I1.setWD(v.G.WU);
-		I3.setWD(v.K.WU);
-		P2.setWD(v.P.WD); 
 	
 		
 		//Step 5: save triode voltages for next loop - not necessary
@@ -203,6 +201,14 @@ int main(){
 		//Step 6: output | egrep "^\+" to gnuplot, or egrep "^0" for viewing tabulated data
 		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), v.G.Current(),v.K.Current(),v.P.Current(),v.P.WD,P2.WU, v.P.WU,P2.WD);
 		printf("+%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(),v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), v.G.Current(),v.K.Current(),v.P.Current());
+		
+		
+//		T Ip = ((v.G.WD - v.vg)/v.G.PortRes + (v.K.WD - v.vk)/v.K.PortRes);
+//		v.vp = v.P.WD - v.P.PortRes*Ip;
+//		v.P.WU = 2.0*v.vp-v.P.WD;
+		P2.setWD(v.P.WU); 
+		I1.setWD(v.G.WU);
+		I3.setWD(v.K.WU);
 	}
 }
 
