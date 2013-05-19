@@ -25,13 +25,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #define TOLERANCE 1e-8
 
+extern "C" {
 
 float tubestage(float input, Circuit* c, float tubedrive) { 
 
 	float output;
 
 	//Step 1: read input sample as voltage for the source
-	c->Vi.e = input;
+	c->Vi.e = tubedrive*input;
 
 	//Step 2: propagate waves up to the triode and push values into triode element
 	c->I1.waveUp();
@@ -75,4 +76,4 @@ float tubestage(float input, Circuit* c, float tubedrive) {
 	return output;
 }
 
-
+}

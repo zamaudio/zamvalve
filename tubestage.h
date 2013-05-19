@@ -1,5 +1,6 @@
 //tubestage.h
 
+extern "C" {
 
 typedef struct {
 	// Passive components
@@ -37,3 +38,5 @@ typedef struct {
 
 
 float tubestage(float input, Circuit* c, float tubedrive); 
+
+}
