@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __WDF_H__
 #define __WDF_H__
 
+#include <math.h>
+
 #define ONEPORT 0
 #define PASSTHROUGH 1
 #define THREEPORT 2

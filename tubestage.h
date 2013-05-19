@@ -1,6 +1,8 @@
 //tubestage.h
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 typedef struct {
 	// Passive components
@@ -39,4 +41,6 @@ typedef struct {
 
 float tubestage(float input, Circuit* c, float tubedrive); 
 
+#ifdef __cplusplus
 }
+#endif

@@ -7,7 +7,6 @@
 
 #define ZAMVALVE_URI "http://zamaudio.com/lv2/zamvalve"
 
-
 typedef enum {
 	ZAMVALVE_INPUT = 0,
 	ZAMVALVE_OUTPUT = 1,

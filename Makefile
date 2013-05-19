@@ -6,7 +6,7 @@ LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 
 OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
 
-LDFLAGS ?= -Wl,--as-needed
+LDFLAGS ?= -Wl,--as-needed -lm
 CXXFLAGS ?= $(OPTIMIZATIONS) -Wall
 CFLAGS ?= $(OPTIMIZATIONS) -Wall
 
@@ -44,11 +44,12 @@ $(BUNDLE): manifest.ttl zamvalve.ttl zamvalve$(LIB_EXT)
 	mkdir $(BUNDLE)
 	cp manifest.ttl zamvalve.ttl zamvalve$(LIB_EXT) $(BUNDLE)
 
-zamvalve$(LIB_EXT): zamvalve.c tubestage.cpp
+zamvalve$(LIB_EXT): zamvalve.c tubestage.cpp wdf.cpp
 	$(CXX) -o zamvalve$(LIB_EXT) \
 		$(CXXFLAGS) \
 		zamvalve.c \
 		tubestage.cpp \
+		wdf.cpp \
 		$(LV2FLAGS) $(LDFLAGS)
 
 zamvalve.peg: zamvalve.ttl

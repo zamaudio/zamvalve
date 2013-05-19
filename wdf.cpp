@@ -1,5 +1,10 @@
 //wdf.cpp
 
+#include <stdio.h>
+#include <inttypes.h>
+#include <math.h>
+#include "wdf.h"
+
 WDF::WDF() {}
 
 void WDF::setWD(T val) {
@@ -560,3 +565,4 @@ T Triode::zeroffg ( T a, T b, T t )
 	}
 	return sb;
 }
+
