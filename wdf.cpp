@@ -2,8 +2,9 @@
 
 #include <stdio.h>
 #include <inttypes.h>
-#include <math.h>
+#include <cmath>
 #include "wdf.h"
+using std::abs;
 
 WDF::WDF() {}
 
@@ -198,8 +199,30 @@ T V::waveUp() {
 	return WU;
 }
 
+inline T _exp(const T x)
+{
+    if(x < 10.0 && x > 10.0)
+        return 1.0 + x + x*x/2.0 + x*x*x/6.0 + x*x*x*x/24.0 + x*x*x*x*x/120.0
+            + x*x*x*x*x*x/720.0 + x*x*x*x*x*x*x/5040.0;
+    else
+        return exp(x);
+}
+
+inline T _log(const T x)
+{
+    if(x > 10)
+        return log(x);
+    const T a=(x-1)/(x+1);
+    return 2.0*(a+a*a*a/3.0+a*a*a*a*a/5.0+a*a*a*a*a*a*a/7.0+a*a*a*a*a*a*a*a*a/9.0); 
+}
+
+inline T _pow(const T a, const T b)
+{
+    return pow(a,b);
+}
+
 T Triode::ffg(T VG) {
-        return (G.WD-G.PortRes*(gg*pow(log(1.0+exp(cg*VG))/cg,e)+ig0)-VG);
+        return (G.WD-G.PortRes*(gg*_pow(_log(1.0+_exp(cg*VG))/cg,e)+ig0)-VG);
 }
 
 T Triode::fgdash(T VG) {
@@ -210,7 +233,26 @@ T Triode::fgdash(T VG) {
 }
 
 T Triode::ffp(T VP) { 
-	return (P.WD+P.PortRes*((g*pow(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
+    static bool prepared = false;
+    static double scale;
+    static double coeff[4];
+    if(!prepared) {
+        //go go series expansion
+        const double L2 = log(2.0);
+
+        const double scale = pow(L2,gamma-2)/(8.0*pow(c,gamma));
+        coeff[0] = 8.0*L2*L2*scale;
+        coeff[1] = gamma*c*L2*4*scale;
+        coeff[2] = (c*c*gamma*gamma+L2*c*c*gamma-c*c*gamma)*scale;
+        coeff[3] = 0.0;
+        prepared = true;
+    }
+
+    double A = VP/mu+vg;
+    return (P.WD+P.PortRes*((g*(coeff[0]+coeff[1]*A+coeff[2]*A*A))+(G.WD-vg)/G.PortRes)-VP);
+
+    printf("%f\n", VP/mu+vg);
+	return (P.WD+P.PortRes*((g*_pow(_log(1.0+_exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
 }	//	    ^
 
 T Triode::fpdash(T VP) {
@@ -317,18 +359,17 @@ T Triode::r8_abs ( T x )
 	return value;
 }
 
-T Triode::r8_epsilon ( )
+Triode::Triode()
 {
-	T r;
-
-	r = 1.0;
+	T r = 1.0;
 
 	while ( 1.0 < ( T ) ( 1.0 + r )	)
 	{
 		r = r / 2.0;
 	}
 
-	return ( 2.0 * r );
+	r *= 2.0;
+	r8_epsilon = r;
 }
 
 T Triode::r8_max ( T x, T y )
@@ -392,11 +433,11 @@ T Triode::zeroffp ( T a, T b, T t )
 	e = sb - sa;
 	d = e;
 
-	macheps = r8_epsilon ( );
+	macheps = r8_epsilon;
 
 	for ( ; ; )
 	{
-		if ( r8_abs ( fc ) < r8_abs ( fb ) )
+		if ( abs ( fc ) < abs ( fb ) )
 		{
 			sa = sb;
 			sb = c;
@@ -406,15 +447,15 @@ T Triode::zeroffp ( T a, T b, T t )
 			fc = fa;
 		}
 
-		tol = 2.0 * macheps * r8_abs ( sb ) + t;
+		tol = 2.0 * macheps * abs ( sb ) + t;
 		m = 0.5 * ( c - sb );
 
-		if ( r8_abs ( m ) <= tol || fb == 0.0 )
+		if ( abs ( m ) <= tol || fb == 0.0 )
 		{
 			break;
 		}
 
-		if ( r8_abs ( e ) < tol || r8_abs ( fa ) <= r8_abs ( fb ) )
+		if ( abs ( e ) < tol || abs ( fa ) <= abs ( fb ) )
 		{
 			e = m;
 			d = e;
@@ -448,8 +489,8 @@ T Triode::zeroffp ( T a, T b, T t )
 			s = e;
 			e = d;
 
-			if ( 2.0 * p < 3.0 * m * q - r8_abs ( tol * q ) &&
-				p < r8_abs ( 0.5 * s * q ) )
+			if ( 2.0 * p < 3.0 * m * q - abs ( tol * q ) &&
+				p < abs ( 0.5 * s * q ) )
 			{
 				d = p / q;
 			}
@@ -462,7 +503,7 @@ T Triode::zeroffp ( T a, T b, T t )
 		sa = sb;
 		fa = fb;
 
-		if ( tol < r8_abs ( d ) )
+		if ( tol < abs ( d ) )
 		{
 			sb = sb + d;
 		}
@@ -518,11 +559,11 @@ T Triode::zeroffg ( T a, T b, T t )
 	e = sb - sa;
 	d = e;
 
-	macheps = r8_epsilon ( );
+	macheps = r8_epsilon;
 
 	for ( ; ; )
 	{
-		if ( r8_abs ( fc ) < r8_abs ( fb ) )
+		if ( abs ( fc ) < abs ( fb ) )
 		{
 			sa = sb;
 			sb = c;
@@ -532,15 +573,15 @@ T Triode::zeroffg ( T a, T b, T t )
 			fc = fa;
 		}
 
-		tol = 2.0 * macheps * r8_abs ( sb ) + t;
+		tol = 2.0 * macheps * abs ( sb ) + t;
 		m = 0.5 * ( c - sb );
 
-		if ( r8_abs ( m ) <= tol || fb == 0.0 )
+		if ( abs ( m ) <= tol || fb == 0.0 )
 		{
 			break;
 		}
 
-		if ( r8_abs ( e ) < tol || r8_abs ( fa ) <= r8_abs ( fb ) )
+		if ( abs ( e ) < tol || abs ( fa ) <= abs ( fb ) )
 		{
 			e = m;
 			d = e;
@@ -574,8 +615,8 @@ T Triode::zeroffg ( T a, T b, T t )
 			s = e;
 			e = d;
 
-			if ( 2.0 * p < 3.0 * m * q - r8_abs ( tol * q ) &&
-				p < r8_abs ( 0.5 * s * q ) )
+			if ( 2.0 * p < 3.0 * m * q - abs ( tol * q ) &&
+				p < abs ( 0.5 * s * q ) )
 			{
 				d = p / q;
 			}
@@ -588,7 +629,7 @@ T Triode::zeroffg ( T a, T b, T t )
 		sa = sb;
 		fa = fb;
 
-		if ( tol < r8_abs ( d ) )
+		if ( tol < abs ( d ) )
 		{
 			sb = sb + d;
 		}

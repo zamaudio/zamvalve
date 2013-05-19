@@ -85,13 +85,16 @@ public:
 	T secantfp(T *i1, T *i2);
 	T newtonfp(T *i1);
 	
+	Triode();
+
 	//Brent's method
 	T r8_abs ( T x );
-	T r8_epsilon ( );
+	T r8_epsilon;
 	T r8_max ( T x, T y );
 	T r8_sign ( T x );
 	T zeroffp ( T a, T b, T t );
 	T zeroffg ( T a, T b, T t );
+
 };
 
 class Adaptor : public OnePort {

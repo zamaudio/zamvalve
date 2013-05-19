@@ -166,10 +166,12 @@ public:
 			vg0 = -10.0;
 			vg1 = 10.0;
 			v.vg = v.zeroffg(vg0,vg1,TOLERANCE);
+			//v.vg = v.secantfg(&vg0,&vg1);
 
 			vp0 = e;
 			vp1 = 0.0;
 			v.vp = v.zeroffp(vp0,vp1,TOLERANCE);
+			//v.vp = v.secantfp(&vp0,&vp1);
 
 			v.vk = v.ffk();
 
