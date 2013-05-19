@@ -178,7 +178,7 @@ public:
 			v.P.WU = 2.0*v.vp-v.P.WD;
 			
 			p(1)[i] = p(0)[i];
-			p(1)[i] = Ro.Voltage()/200.0; 
+			p(1)[i] = Ro.Voltage()/e; 
 
 			P2.setWD(v.P.WU); 
 			I1.setWD(v.G.WU);
