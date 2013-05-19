@@ -26,9 +26,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 extern "C" {
 #endif
 
-float tubestage(float input, Circuit* c, float tubedrive) { 
+//void class_do_something(void *v) { ((Class *)v)->do_something();}
+
+float tubestage(float input, void* cct, float tubedrive) { 
 
 	float output;
+	Circuit *c = (Circuit *) cct;
 	
 	Triode *t = &(c->v);
 	inv *gate = &(c->I1);

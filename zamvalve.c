@@ -134,7 +134,7 @@ run(LV2_Handle instance, uint32_t n_samples)
  
 	for (uint32_t i = 0; i < n_samples; ++i) {
 		output[i] = input[i];
-		output[i] = tubestage(input[i], c, tubedrive);
+		output[i] = tubestage(input[i], (void*) c, tubedrive);
 	}
   
 }

@@ -1,10 +1,7 @@
 //tubestage.h
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct {
+class Circuit {
+public:
 	// Passive components
 	V Vi;
 	C Ci;
@@ -35,11 +32,14 @@ typedef struct {
 	par P2;
 
 	//Triode element
-	Triode v;
-} Circuit;
+	Triode v;	
+};
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-float tubestage(float input, Circuit* c, float tubedrive); 
+float tubestage(float input, void* c, float tubedrive); 
 
 #ifdef __cplusplus
 }
