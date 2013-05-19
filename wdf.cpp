@@ -1,214 +1,562 @@
+//wdf.cpp
+
+WDF::WDF() {}
+
+void WDF::setWD(T val) {
+	WD = val;
+	state = val;
+	DUMP(printf("DOWN\tWDF\t%c\tWD=%f\tWU=%f\tV=%f\n",type,WD,WU,(WD+WU)/2.0));	
+}
+
+void OnePort::setWD(T val) {
+	WD = val;
+	state = val;
+	DUMP(printf("DOWN\tOneport\t%c\tWD=%f\tWU=%f\tV=%f\n",type,WD,WU,(WD+WU)/2.0));	
+}
+
+T WDF::Voltage() {
+	T Volts = (WU + WD) / 2.0;
+	return Volts;
+}
+
+T WDF::Current() {
+	T Amps = (WU - WD) / (2.0*PortRes);
+	return Amps;
+}
+
+template <class Port1, class Port2>ser::ser(Port1 *l, Port2 *r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = l->PortRes + r->PortRes;
+	type = 'S';
+}
+
+template <class Port>inv::inv(Port *l) : Adaptor(PASSTHROUGH) {
+	left = l;
+	PortRes = l->PortRes;
+	type = 'I';
+}
+
+T ser::waveUp() {
+	//Adaptor::WU = -left->waveUp() - right->waveUp();
+	WDF::WU = -left->waveUp() - right->waveUp();
+	DUMP(printf("UP\tser\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
+	return WU;
+}
+
+template <class Port1, class Port2>par::par(Port1 *l, Port2 *r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = 1.0 / (1.0 / l->PortRes + 1.0 / r->PortRes);
+	type = 'P';
+}
+
+T par::waveUp() {
+	T G23 = 1.0 / left->PortRes + 1.0 / right->PortRes;
+	WDF::WU = (1.0 / left->PortRes)/G23*left->waveUp() + (1.0 / right->PortRes)/G23*right->waveUp();
+	DUMP(printf("UP\tpar\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
+	return WU;
+}
+
+Adaptor::Adaptor(int flag) {
+	WU = 0.0;
+	WD = 0.0;
+	switch (flag) {
+		case ONEPORT:
+			left = NULL;
+			right = NULL;
+			break;
+		case PASSTHROUGH:
+			right = NULL;
+			break;
+		default:
+		case THREEPORT:
+			break;
+	}
+}
+
+void ser::setWD(T waveparent) {
+	Adaptor::setWD(waveparent);
+	DUMP(printf("SER WP=%f\n",waveparent));
+	left->setWD(left->WU-(2.0*left->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
+	right->setWD(right->WU-(2.0*right->PortRes/(PortRes+left->PortRes+right->PortRes))*(waveparent+left->WU+right->WU));
+}
+
+void par::setWD(T waveparent) {
+	Adaptor::setWD(waveparent);
+	DUMP(printf("PAR WP=%f\n",waveparent));
+	T p = 2.0*(waveparent/PortRes + left->WU/left->PortRes + right->WU/right->PortRes)/(1.0/PortRes + 1.0/left->PortRes + 1.0/right->PortRes);
+
+	left->setWD((p - left->WU));
+	right->setWD((p - right->WU));
+}
+
+T inv::waveUp() {
+	///////////WD = -left->WD;
+	WU = -left->waveUp(); 	//-
+	DUMP(printf("UP\tinv\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
+	return WU;
+}
+
+void inv::setWD(T waveparent) {
+	WDF::setWD(waveparent);
+	DUMP(printf("INV WP=%f\n",waveparent));
+	//left->WD = -waveparent;		//-
+	///////////left->WU = -WU;
+	left->setWD(-waveparent);	//-
+	
+}
+
+R::R(T res) : Adaptor(ONEPORT) {
+	PortRes = res;
+	type = 'R';
+}
+
+T R::waveUp() {
+	WU = 0.0;
+	DUMP(printf("UP\tR\tWU=%f\tWD=%f\tV=%f\n",WU, WD,(WD+WU)/2.0));
+	return WU;
+}
+
+C::C(T c, T fs) : Adaptor(ONEPORT) {
+	PortRes = 1.0/(2.0*c*fs);
+	state = 0.0;
+	type = 'C';
+}
+
+T C::waveUp() {
+	WU = state;
+	DUMP(printf("UP\tC\tWU=%f\tWD=%f\tV=%f\n",WU,WD,(WD+WU)/2.0));
+	return WU;
+}
+
+V::V(T ee, T r) : Adaptor(ONEPORT) {
+	e = ee;
+	PortRes = r;
+	WD = 0.0;  //always?
+	type = 'V';
+}
+
+T V::waveUp() {
+	T watts = 100.0;
+	WU = 2.0*e - WD;
+	if (Voltage()*Current() > watts) WU *= 0.9955;
+	DUMP(printf("UP\tV\tWU=%f\tWD=%f\tV=%f\n",WU, WD,(WD+WU)/2.0));
+	return WU;
+}
+
+T Triode::ffg(T VG) {
+        return (G.WD-G.PortRes*(gg*pow(log(1.0+exp(cg*VG))/cg,e)+ig0)-VG);
+}
+
+T Triode::fgdash(T VG) {
+        T a1 = exp(cg*VG);
+        T b1 = -e*pow(log(a1+1.0)/cg,e-1.0);
+        T c1 = a1/(a1+1.0)*gg*G.PortRes;
+        return (b1*c1);
+}
+
+T Triode::ffp(T VP) { 
+	return (P.WD+P.PortRes*((g*pow(log(1.0+exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
+}	//	    ^
+
+T Triode::fpdash(T VP) {
+        T a1 = exp(c*(vg+VP/mu));
+        T b1 = a1/(mu*(a1+1.0));
+        T c1 = g*gamma*P.PortRes*pow(log(a1+1.0)/c,gamma-1.0);
+        return (c1*b1);
+}
+
+T Triode::ffk() {
+        return (K.WD - K.PortRes*(g*pow(log(1.0+exp(c*(vp/mu+vg)))/c,gamma)));
+}
 /*
-wdf.cpp  Test classes for zamvalve
-Copyright (C) 2013  Damien Zammit
+T Triode::secantfg(T *i1, T *i2) {
+        T vgn = 0.0;
+        T init = *i1;
+        for (int i = 0; i<ITER; ++i) {
+                vgn = *i1 - fg(*i1)*(*i1-*i2)/(fg(*i1)-fg(*i2));
+                *i2 = *i1;
+                *i1 = vgn;
+                if ((fabs(fg(vgn))) < EPSILON) break;
+        }
+        if ((fabs(fg(vgn)) >= EPSILON)) {
+                DUMP(fprintf(stderr,"Vg did not converge\n"));
+		return init;
+	}
+        return vgn; 
+}               
+        
+T Triode::newtonfg(T *i1) {
+        T init = *i1;
+        if (fabs(fg(*i1)) < EPSILON || fgdash(*i1)==0.0) return *i1;
+        T vgn = 0.0;
+        for (int i = 0; i<ITER; ++i) {
+                vgn = *i1 - fg(*i1)/fgdash(*i1);
+                *i1 = vgn;
+                if (fabs(fg(vgn)) < EPSILON) break;
+        } 
+        if ((fabs(fg(vgn)) >= EPSILON)) {
+//                vgn = init;
+                DUMP(fprintf(stderr,"Vg did not converge\n"));
+        }       
+        return vgn;
+}
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+T Triode::newtonfp(T *i1) {
+        T init = *i1;
+        if (fabs(fp(*i1)) < EPSILON || fpdash(*i1)==0.0) return *i1;
+        T vpn = 0.0;
+        for (int i = 0; i<ITER; ++i) {
+                vpn = *i1 - fp(*i1)/fpdash(*i1);
+                *i1 = vpn;
+                if (fabs(fp(vpn)) < EPSILON) break;
+        }
+        if ((fabs(fp(vpn)) >= EPSILON)) {
+//                vpn = init;
+                DUMP(fprintf(stderr,"Vp did not converge\n"));
+        }
+        return vpn;
+}
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+T Triode::secantfp(T *i1, T *i2) {
+        T vpn = 0.0;
+        for (int i = 0; i<ITER; ++i) {
+                vpn = *i1 - fp(*i1)*(*i1-*i2)/(fp(*i1)-fp(*i2));
+                *i2 = *i1;
+                *i1 = vpn;
+                if ((fabs(fp(vpn))) < EPSILON) break;
+        }
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+        if ((fabs(fp(vpn)) >= EPSILON))
+                DUMP(fprintf(stderr,"Vp did not converge\n"));
+        return vpn;
+}
 */
 
-#include <stdio.h>
-#include <inttypes.h>
-#include <math.h>
-#include "wdf.h"
+//****************************************************************************80
+//	Purpose:
+//
+//		Brent's method root finder.
+//
+//	Licensing:
+//
+//		This code below is distributed under the GNU LGPL license.
+//
+//	Author:
+//
+//		Original FORTRAN77 version by Richard Brent.
+//		C++ version by John Burkardt.
+//		Adapted for zamvalve by Damien Zammit.
 
-#define TOLERANCE 1e-8
+T Triode::r8_abs ( T x )
+{
+	T value;
 
-inline T sanitize_denormal(T value) {
-	if (isnan(value) || isinf(value)) {
-		DUMP(fprintf(stderr,"Broken number ( %e )\n",value));
-		return 0.0;
+	if ( 0.0 <= x )
+	{
+		value = x;
+	}
+	else
+	{
+		value = - x;
 	}
 	return value;
 }
 
-/////////////////////////////////////////////
+T Triode::r8_epsilon ( )
+{
+	T r;
 
-int main(){ 
-	T Fs = 48000.0;
-	T N = Fs/3;
-	T gain = 2.0;
-	T f0 = 1001.0;
-	T input[48000] = { 0.0 };
-	int i;
-	for (i = 0; i < N; ++i) {
-		input[i] = gain*sin(2.0*M_PI*f0/Fs*i);
+	r = 1.0;
+
+	while ( 1.0 < ( T ) ( 1.0 + r )	)
+	{
+		r = r / 2.0;
 	}
 
-	// Passive components
-	T ci = 0.0000001;	//100nF
-	T ck = 0.00001;		//10uF
-	T co = 0.00000001;	//10nF
-	T ro = 1000000.0;	//1Mohm
-	T rp = 100000.0;	//100kohm
-	T rg = 20000.0;		//20kohm
-	T ri = 1000000.0;	//1Mohm
-	T rk = 1000.0;		//1kohm
-	T e = 250.0;		//250V
-
-	V Vi = V(0.0,10000.0);	//1kohm internal resistance
-	C Ci = C(ci, Fs);
-	C Ck = C(ck, Fs);
-	C Co = C(co, Fs);
-	R Ro = R(ro);
-	R Rg = R(rg);
-	R Ri = R(ri);
-	R Rk = R(rk);
-	V E = V(e, rp);
-
-#if 0
-//Mod
-/*
-	//->Gate
-	ser S0 = ser(&Ci, &Vi);
-	inv I0 = inv(&S0);
-	par P0 = par(&I0, &Ri);
-	ser S1 = ser(&Rg, &P0);
-	inv I1 = inv(&S1);
-
-	//->Cathode
-	par I3 = par(&Ck, &Rk);
-
-	//->Plate
-	ser S2 = ser(&Co, &Ro);
-	inv I4 = inv(&S2);
-	inv EE = inv(&E);
-	par P2 = par(&I4, &EE);
-*/
-	ser S0 = ser(&Ci, &Vi);
-	//inv I0 = inv(&S0);
-	inv RRi = inv(&Ri);
-	par P0 = par(&S0, &RRi);
-	inv RRg = inv(&Rg);
-	ser S1 = ser(&RRg, &P0);
-	inv I1 = inv(&S1);
-
-	par S3 = par(&Ck, &Rk);
-	inv I3 = inv(&S3);
-
-	ser S2 = ser(&Co, &Ro);
-	inv I4 = inv(&S2);
-	//inv EE = inv(&E);
-	par P2 = par(&I4, &E);
-
-#else
-//Official
-	//->Gate
-	ser S0 = ser(&Ci, &Vi);
-	inv I0 = inv(&S0);
-	par P0 = par(&I0, &Ri);
-	ser S1 = ser(&Rg, &P0);
-	inv I1 = inv(&S1);
-
-	//->Cathode
-	par I3 = par(&Ck, &Rk);
-
-	//->Plate
-	ser S2 = ser(&Co, &Ro);
-	inv I4 = inv(&S2);
-	par P2 = par(&I4, &E);
-#endif	
-
-	// 12AX7 triode model RSD-1
-	Triode v;
-	v.g = 2.242e-3;
-	v.mu = 103.2;
-	v.gamma = 1.26;
-	v.c = 3.4;
-	v.gg = 6.177e-4;
-	v.e = 1.314;
-	v.cg = 9.901;
-	v.ig0 = 8.025e-8;
-
-	printf("0j\t  Vi\t  Ro\t  Vg\t  Vk\t  Vp\t  Ri\t  Rk\t  Rg\t  E\t  Co\t  Ck\t  EA\t  RoA\t  Ig\t  Ik\t  Ip\n");
-	
-	//Initial voltage guess for triode nodes
-	Vi.e = input[0];
-	I1.waveUp();
-	I3.waveUp();
-	P2.waveUp();
-	v.G.WD = I1.WU;
-	v.K.WD = I3.WU;
-	v.P.WD = P2.WU;
-
-	v.vg = v.G.WD;
-	v.vk = v.K.WD;
-	v.vp = v.P.WD;
-
-	for (int j = 0; j < N; ++j) {
-		//Step 1: read input sample as voltage for the source
-		Vi.e = input[j];
-
-		//Step 2: propagate waves up to the triode and push values into triode element
-		I1.waveUp();
-		I3.waveUp();
-		P2.waveUp();
-		v.G.WD = I1.WU;
-		v.K.WD = I3.WU; 
-		v.P.WD = P2.WU;
-	v.vg = v.G.WD;
-	v.vk = v.K.WD;
-	v.vp = v.P.WD;
-		v.G.PortRes = I1.PortRes;
-		v.K.PortRes = I3.PortRes;
-		v.P.PortRes = P2.PortRes;
-
-		//Step 3: compute wave reflections inside the triode
-		T vg0, vg1, vp0, vp1;
-
-		vg0 = -10.0;
-		vg1 = 10.0;
-		v.vg = v.zeroffg(vg0,vg1,TOLERANCE);
-	//	v.vg = v.secantfg(&vg0, &vg1);
-	//	v.vg = v.newtonfg(&vg0);
-//		fprintf(stderr,"vg = %f\n",v.vg);
-
-		vp0 = e;
-		vp1 = 0.0;
-		v.vp = v.zeroffp(vp0,vp1,TOLERANCE);
-	//	v.vp = v.secantfp(&vp0, &vp1);
-	//	v.vp = v.newtonfp(&vp0);
-//		fprintf(stderr,"vp = %f\n",v.vp);
-
-		v.vk = v.ffk();
-		fprintf(stderr,"vk = %f\n",v.vk);
-
-
-		v.G.WU = 2.0*v.vg-v.G.WD;
-		v.K.WU = 2.0*v.vk-v.K.WD;
-		v.P.WU = 2.0*v.vp-v.P.WD;
-		
-//		fprintf(stderr,"%f %f %f :g %f %f :p %f %f :k %f %f\n",v.vg, v.vp, v.vk, v.G.WD, v.G.WU, v.P.WD, v.P.WU, v.K.WD, v.K.WU);
-
-		//Step 4: push new waves down from the triode element
-	
-		
-		//Step 5: save triode voltages for next loop - not necessary
-	//	v.vg = v.G.Voltage();
-	//	v.vk = v.K.Voltage();
-	//	v.vp = v.P.Voltage();
-		
-		//Step 6: output | egrep "^\+" to gnuplot, or egrep "^0" for viewing tabulated data
-		printf("%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t: %.4f\t%.4f\t%.4f a:%.2f: %.2f b:%.2f: %.2f\n",j/Fs, input[j], Ro.Voltage(), I1.Voltage(),I3.Voltage(),P2.Voltage(),Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), v.G.Current(),v.K.Current(),v.P.Current(),v.P.WD,P2.WU, v.P.WU,P2.WD);
-		printf("+%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", j/Fs, input[j], Ro.Voltage(),v.vg,v.vk,v.vp,Ri.Voltage(),Rk.Voltage(),Rg.Voltage(),E.Voltage(),Co.Voltage(), Ck.Voltage(), E.Current(), Ro.Current(), v.G.Current(),v.K.Current(),v.P.Current());
-		
-		
-//		T Ip = ((v.G.WD - v.vg)/v.G.PortRes + (v.K.WD - v.vk)/v.K.PortRes);
-//		v.vp = v.P.WD - v.P.PortRes*Ip;
-//		v.P.WU = 2.0*v.vp-v.P.WD;
-		P2.setWD(v.P.WU); 
-		I1.setWD(v.G.WU);
-		I3.setWD(v.K.WU);
-	}
+	return ( 2.0 * r );
 }
 
+T Triode::r8_max ( T x, T y )
+{
+	T value;
+
+	if ( y < x )
+	{
+		value = x;
+	}
+	else
+	{
+		value = y;
+	}
+	return value;
+}
+
+T Triode::r8_sign ( T x )
+{
+	T value;
+
+	if ( x < 0.0 )
+	{
+		value = -1.0;
+	}
+	else
+	{
+		value = 1.0;
+	}
+	return value;
+}
+
+
+T Triode::zeroffp ( T a, T b, T t )
+{
+	T c;
+	T d;
+	T e;
+	T fa;
+	T fb;
+	T fc;
+	T m;
+	T macheps;
+	T p;
+	T q;
+	T r;
+	T s;
+	T sa;
+	T sb;
+	T tol;
+//
+//	Make local copies of A and B.
+//
+	sa = a;
+	sb = b;
+	fa = ffp ( sa );
+	fb = ffp ( sb );
+
+	c = sa;
+	fc = fa;
+	e = sb - sa;
+	d = e;
+
+	macheps = r8_epsilon ( );
+
+	for ( ; ; )
+	{
+		if ( r8_abs ( fc ) < r8_abs ( fb ) )
+		{
+			sa = sb;
+			sb = c;
+			c = sa;
+			fa = fb;
+			fb = fc;
+			fc = fa;
+		}
+
+		tol = 2.0 * macheps * r8_abs ( sb ) + t;
+		m = 0.5 * ( c - sb );
+
+		if ( r8_abs ( m ) <= tol || fb == 0.0 )
+		{
+			break;
+		}
+
+		if ( r8_abs ( e ) < tol || r8_abs ( fa ) <= r8_abs ( fb ) )
+		{
+			e = m;
+			d = e;
+		}
+		else
+		{
+			s = fb / fa;
+
+			if ( sa == c )
+			{
+				p = 2.0 * m * s;
+				q = 1.0 - s;
+			}
+			else
+			{
+				q = fa / fc;
+				r = fb / fc;
+				p = s * ( 2.0 * m * q * ( q - r ) - ( sb - sa ) * ( r - 1.0 ) );
+				q = ( q - 1.0 ) * ( r - 1.0 ) * ( s - 1.0 );
+			}
+
+			if ( 0.0 < p )
+			{
+				q = - q;
+			}
+			else
+			{
+				p = - p;
+			}
+
+			s = e;
+			e = d;
+
+			if ( 2.0 * p < 3.0 * m * q - r8_abs ( tol * q ) &&
+				p < r8_abs ( 0.5 * s * q ) )
+			{
+				d = p / q;
+			}
+			else
+			{
+				e = m;
+				d = e;
+			}
+		}
+		sa = sb;
+		fa = fb;
+
+		if ( tol < r8_abs ( d ) )
+		{
+			sb = sb + d;
+		}
+		else if ( 0.0 < m )
+		{
+			sb = sb + tol;
+		}
+		else
+		{
+			sb = sb - tol;
+		}
+
+		fb = ffp ( sb );
+
+		if ( ( 0.0 < fb && 0.0 < fc ) || ( fb <= 0.0 && fc <= 0.0 ) )
+		{
+			c = sa;
+			fc = fa;
+			e = sb - sa;
+			d = e;
+		}
+	}
+	return sb;
+}
+
+T Triode::zeroffg ( T a, T b, T t )
+{
+	T c;
+	T d;
+	T e;
+	T fa;
+	T fb;
+	T fc;
+	T m;
+	T macheps;
+	T p;
+	T q;
+	T r;
+	T s;
+	T sa;
+	T sb;
+	T tol;
+//
+//	Make local copies of A and B.
+//
+	sa = a;
+	sb = b;
+	fa = ffg ( sa );
+	fb = ffg ( sb );
+
+	c = sa;
+	fc = fa;
+	e = sb - sa;
+	d = e;
+
+	macheps = r8_epsilon ( );
+
+	for ( ; ; )
+	{
+		if ( r8_abs ( fc ) < r8_abs ( fb ) )
+		{
+			sa = sb;
+			sb = c;
+			c = sa;
+			fa = fb;
+			fb = fc;
+			fc = fa;
+		}
+
+		tol = 2.0 * macheps * r8_abs ( sb ) + t;
+		m = 0.5 * ( c - sb );
+
+		if ( r8_abs ( m ) <= tol || fb == 0.0 )
+		{
+			break;
+		}
+
+		if ( r8_abs ( e ) < tol || r8_abs ( fa ) <= r8_abs ( fb ) )
+		{
+			e = m;
+			d = e;
+		}
+		else
+		{
+			s = fb / fa;
+
+			if ( sa == c )
+			{
+				p = 2.0 * m * s;
+				q = 1.0 - s;
+			}
+			else
+			{
+				q = fa / fc;
+				r = fb / fc;
+				p = s * ( 2.0 * m * q * ( q - r ) - ( sb - sa ) * ( r - 1.0 ) );
+				q = ( q - 1.0 ) * ( r - 1.0 ) * ( s - 1.0 );
+			}
+
+			if ( 0.0 < p )
+			{
+				q = - q;
+			}
+			else
+			{
+				p = - p;
+			}
+
+			s = e;
+			e = d;
+
+			if ( 2.0 * p < 3.0 * m * q - r8_abs ( tol * q ) &&
+				p < r8_abs ( 0.5 * s * q ) )
+			{
+				d = p / q;
+			}
+			else
+			{
+				e = m;
+				d = e;
+			}
+		}
+		sa = sb;
+		fa = fb;
+
+		if ( tol < r8_abs ( d ) )
+		{
+			sb = sb + d;
+		}
+		else if ( 0.0 < m )
+		{
+			sb = sb + tol;
+		}
+		else
+		{
+			sb = sb - tol;
+		}
+
+		fb = ffg ( sb );
+
+		if ( ( 0.0 < fb && 0.0 < fc ) || ( fb <= 0.0 && fc <= 0.0 ) )
+		{
+			c = sa;
+			fc = fa;
+			e = sb - sa;
+			d = e;
+		}
+	}
+	return sb;
+}
