@@ -5,6 +5,8 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix pg: <http://lv2plug.in/ns/ext/port-groups#>.
 @prefix ue: <http://lv2plug.in/ns/extensions/units#>.
+@prefix ll: <http://ll-plugins.nongnu.org/lv2/namespace#>.
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#>.
 
 <http://zamaudio.com/lv2/zamvalve>
 	a lv2:Plugin;
@@ -18,6 +20,7 @@
 		foaf:mbox <mailto:damien@zamaudio.com>;
 		];
 	doap:license <http://usefulinc.com/doap/licenses/gpl>;
+	ll:pegName "p";
   
 lv2:port [
 	a lv2:AudioPort, lv2:InputPort;
@@ -41,5 +44,17 @@ lv2:port [
 	lv2:minimum 0.1 ;
 	lv2:maximum 30.0 ;
 	lv2:default 1.0 ;
+	lv2:portProperty pprops:logarithmic;
+	ue:unit ue:coef;
+	],
+	
+	[
+	a lv2:ControlPort, lv2:InputPort ;
+	lv2:index 3;
+	lv2:symbol "tubetone";
+	lv2:name "Tube Tone";
+	lv2:minimum 0.0 ;
+	lv2:maximum 1.0 ;
+	lv2:default 0.0 ;
 	ue:unit ue:coef;
 	].

@@ -72,6 +72,8 @@ public:
 
         T vg, vk, vp;
         T g, mu, gamma, c, gg, e, cg, ig0;
+        T g1, mu1, gamma1, c1, gg1, e1, cg1, ig01;
+        T g2, mu2, gamma2, c2, gg2, e2, cg2, ig02;
 
 	T ffg(T VG);
 	T fgdash(T VG);
@@ -118,6 +120,9 @@ public:
 	T waveUp();
 };
 
+class inv;
+class ser;
+class par;
 #include "inv.h"
 #include "ser.h"
 #include "par.h"
