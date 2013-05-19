@@ -233,27 +233,29 @@ T Triode::fgdash(T VG) {
 }
 
 T Triode::ffp(T VP) { 
-    static bool prepared = false;
-    static double scale;
-    static double coeff[4];
-    if(!prepared) {
-        //go go series expansion
-        const double L2 = log(2.0);
+	return ffp_coeff[0]+ffp_coeff[1]*VP+ffp_coeff[2]*VP*VP;
+/*
+	static bool prepared = false;
+	static double coeff[3];
+	if(!prepared) {
+		//go go series expansion
+		const double L2 = log(2.0);
 
-        const double scale = pow(L2,gamma-2)/(8.0*pow(c,gamma));
-        coeff[0] = 8.0*L2*L2*scale;
-        coeff[1] = gamma*c*L2*4*scale;
-        coeff[2] = (c*c*gamma*gamma+L2*c*c*gamma-c*c*gamma)*scale;
-        coeff[3] = 0.0;
-        prepared = true;
-    }
+		const double scale = g*pow(L2,gamma-2)/(8.0*pow(c,gamma));
+		coeff[0] = 8.0*L2*L2*scale;
+		coeff[1] = gamma*c*L2*4*scale;
+		coeff[2] = (c*c*gamma*gamma+L2*c*c*gamma-c*c*gamma)*scale;
+		prepared = true;
+	}
 
-    double A = VP/mu+vg;
-    return (P.WD+P.PortRes*((g*(coeff[0]+coeff[1]*A+coeff[2]*A*A))+(G.WD-vg)/G.PortRes)-VP);
+	const double A = VP/mu+vg;
+	//printf(" %f\n", (P.WD+P.PortRes*(coeff[0]+coeff[1]*A+coeff[2]*A*A+(G.WD-vg)/G.PortRes)-VP));
+	    return (P.WD+P.PortRes*(coeff[0]+coeff[1]*A+coeff[2]*A*A+(G.WD-vg)/G.PortRes)-VP);
 
-    printf("%f\n", VP/mu+vg);
+	//printf("%f\n", VP/mu+vg);
 	return (P.WD+P.PortRes*((g*_pow(_log(1.0+_exp(c*(VP/mu+vg)))/c,gamma))+(G.WD-vg)/G.PortRes)-VP);
-}	//	    ^
+*/
+}
 
 T Triode::fpdash(T VP) {
         T a1 = exp(c*(vg+VP/mu));
@@ -362,13 +364,14 @@ T Triode::r8_abs ( T x )
 Triode::Triode()
 {
 	T r = 1.0;
-
+	
 	while ( 1.0 < ( T ) ( 1.0 + r )	)
 	{
 		r = r / 2.0;
 	}
 
 	r *= 2.0;
+
 	r8_epsilon = r;
 }
 
@@ -420,6 +423,7 @@ T Triode::zeroffp ( T a, T b, T t )
 	T sa;
 	T sb;
 	T tol;
+    prepare();
 //
 //	Make local copies of A and B.
 //
@@ -653,5 +657,29 @@ T Triode::zeroffg ( T a, T b, T t )
 		}
 	}
 	return sb;
+}
+
+
+//Initializes faster equation solving methods
+void Triode::init(void)
+{
+    //go go series expansion
+    const double L2 = log(2.0);
+
+    const double scale = g*pow(L2,gamma-2)/(8.0*pow(c,gamma));
+    ffp_raw[0] = 8.0*L2*L2*scale;
+    ffp_raw[1] = gamma*c*L2*4*scale;
+    ffp_raw[2] = (c*c*gamma*gamma+L2*c*c*gamma-c*c*gamma)*scale;
+}
+
+void Triode::prepare(void)
+{
+    const double c0 = ffp_raw[0],
+                 c1 = ffp_raw[1],
+                 c2 = ffp_raw[2];
+    ffp_coeff[0] = P.WD + P.PortRes*G.WD/G.PortRes + c2*P.PortRes*vg*vg
+        -P.PortRes*vg/G.PortRes+c1*P.PortRes*vg+c0*P.PortRes;
+    ffp_coeff[1] = 2*c2*P.PortRes*vg/mu+c1*P.PortRes/mu-1;
+    ffp_coeff[2] = c2*P.PortRes/(mu*mu);
 }
 

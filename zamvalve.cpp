@@ -106,14 +106,14 @@ public:
 		P2 = par(&I4, &E);
 
 		// 12AX7 triode model RSD-1
-		v.g1 = 2.242e-3;
-		v.mu1 = 103.2;
-		v.gamma1 = 1.26;
-		v.c1 = 3.4;
-		v.gg1 = 6.177e-4;
-		v.e1 = 1.314;
-		v.cg1 = 9.901;
-		v.ig01 = 8.025e-8;
+		v.g = 2.242e-3;
+		v.mu = 103.2;
+		v.gamma = 1.26;
+		v.c = 3.4;
+		v.gg = 6.177e-4;
+		v.e = 1.314;
+		v.cg = 9.901;
+		v.ig0 = 8.025e-8;
 
 		// 12AX7 triode model EHX-1
 		v.g2 = 1.371e-3;
@@ -124,11 +124,14 @@ public:
 		v.e2 = 1.156;
 		v.cg2 = 11.99;
 		v.ig02 = 3.917e-8;
+
+        v.init();
 	}
 
 	void run(uint32_t nframes) {
 		
 		T tubedrive = *p(2);
+	/*
 		T tubetone = *p(3);
 		
 		//12AX7 triode tube mod
@@ -141,6 +144,8 @@ public:
 		v.cg = v.cg1 + (v.cg2-v.cg1)*tubetone;
 		v.ig0 = v.ig01 + (v.ig02-v.ig01)*tubetone;
 
+		v.init();
+	*/	
 		for (uint32_t i = 0; i < nframes; ++i) {
 
 			//Step 1: read input sample as voltage for the source
@@ -166,12 +171,10 @@ public:
 			vg0 = -10.0;
 			vg1 = 10.0;
 			v.vg = v.zeroffg(vg0,vg1,TOLERANCE);
-			//v.vg = v.secantfg(&vg0,&vg1);
 
 			vp0 = e;
 			vp1 = 0.0;
 			v.vp = v.zeroffp(vp0,vp1,TOLERANCE);
-			//v.vp = v.secantfp(&vp0,&vp1);
 
 			v.vk = v.ffk();
 
