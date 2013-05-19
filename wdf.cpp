@@ -36,7 +36,34 @@ template <class Port1, class Port2>ser::ser(Port1 *l, Port2 *r) : Adaptor(THREEP
 	type = 'S';
 }
 
+ser::ser(R* l, par* r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = l->PortRes + r->PortRes;
+	type = 'S';
+}
+
+ser::ser(C* l, R* r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = l->PortRes + r->PortRes;
+	type = 'S';
+}
+
+ser::ser(C* l, V* r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = l->PortRes + r->PortRes;
+	type = 'S';
+}
+
 template <class Port>inv::inv(Port *l) : Adaptor(PASSTHROUGH) {
+	left = l;
+	PortRes = l->PortRes;
+	type = 'I';
+}
+
+inv::inv(ser *l) : Adaptor(PASSTHROUGH) {
 	left = l;
 	PortRes = l->PortRes;
 	type = 'I';
@@ -50,6 +77,27 @@ T ser::waveUp() {
 }
 
 template <class Port1, class Port2>par::par(Port1 *l, Port2 *r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = 1.0 / (1.0 / l->PortRes + 1.0 / r->PortRes);
+	type = 'P';
+}
+
+par::par(inv* l, R* r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = 1.0 / (1.0 / l->PortRes + 1.0 / r->PortRes);
+	type = 'P';
+}
+
+par::par(inv* l, V* r) : Adaptor(THREEPORT) {
+	left = l;
+	right = r;
+	PortRes = 1.0 / (1.0 / l->PortRes + 1.0 / r->PortRes);
+	type = 'P';
+}
+
+par::par(C* l, R* r) : Adaptor(THREEPORT) {
 	left = l;
 	right = r;
 	PortRes = 1.0 / (1.0 / l->PortRes + 1.0 / r->PortRes);

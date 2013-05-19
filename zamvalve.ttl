@@ -18,7 +18,6 @@
 		foaf:mbox <mailto:damien@zamaudio.com>;
 		];
 	doap:license <http://usefulinc.com/doap/licenses/gpl>;
-	lv2:optionalFeature lv2:hardRTCapable ;
   
 lv2:port [
 	a lv2:AudioPort, lv2:InputPort;
@@ -37,7 +36,7 @@ lv2:port [
 	[
 	a lv2:ControlPort, lv2:InputPort ;
 	lv2:index 2;
-	lv2:symbol "drive";
+	lv2:symbol "tubedrive";
 	lv2:name "Tube Drive";
 	lv2:minimum 0.1 ;
 	lv2:maximum 30.0 ;

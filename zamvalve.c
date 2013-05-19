@@ -30,6 +30,8 @@ instantiate(const LV2_Descriptor* descriptor,
 	ZAMVALVE* zamvalve = (ZAMVALVE*)malloc(sizeof(ZAMVALVE));
 	zamvalve->samplerate = rate;
 	T Fs = rate;
+	
+	Circuit* c = &(zamvalve->c);
 
 	// Passive components
 	T ci = 0.0000001;       //100nF
@@ -40,43 +42,43 @@ instantiate(const LV2_Descriptor* descriptor,
 	T rg = 20000.0;         //20kohm
 	T ri = 1000000.0;       //1Mohm
 	T rk = 1000.0;          //1kohm
-	zamvalve->c.e = 250.0;  //250V
+	c->e = 250.0;  //250V
 
-	zamvalve->c.Vi = V(0.0,10000.0);  //10kohm internal resistance
-	zamvalve->c.Ci = C(ci, Fs);
-	zamvalve->c.Ck = C(ck, Fs);
-	zamvalve->c.Co = C(co, Fs);
-	zamvalve->c.Ro = R(ro);
-	zamvalve->c.Rg = R(rg);
-	zamvalve->c.Ri = R(ri);
-	zamvalve->c.Rk = R(rk);
-	zamvalve->c.E = V(zamvalve->c.e, rp);
+	c->Vi = V(0.0,10000.0);  //10kohm internal resistance
+	c->Ci = C(ci, Fs);
+	c->Ck = C(ck, Fs);
+	c->Co = C(co, Fs);
+	c->Ro = R(ro);
+	c->Rg = R(rg);
+	c->Ri = R(ri);
+	c->Rk = R(rk);
+	c->E = V(c->e, rp);
 
 	//Circuit description
 	//->Gate
-	zamvalve->c.S0 = ser(&zamvalve->c.Ci, &zamvalve->c.Vi);
-	zamvalve->c.I0 = inv(&zamvalve->c.S0);
-	zamvalve->c.P0 = par(&zamvalve->c.I0, &zamvalve->c.Ri);
-	zamvalve->c.S1 = ser(&zamvalve->c.Rg, &zamvalve->c.P0);
-	zamvalve->c.I1 = inv(&zamvalve->c.S1);
+	c->S0 = ser(&c->Ci, &c->Vi);
+	c->I0 = inv(&c->S0);
+	c->P0 = par(&c->I0, &c->Ri);
+	c->S1 = ser(&c->Rg, &c->P0);
+	c->I1 = inv(&c->S1);
 
 	//->Cathode
-	zamvalve->c.I3 = par(&zamvalve->c.Ck, &zamvalve->c.Rk);
+	c->I3 = par(&c->Ck, &c->Rk);
 
 	//->Plate
-	zamvalve->c.S2 = ser(&zamvalve->c.Co, &zamvalve->c.Ro);
-	zamvalve->c.I4 = inv(&zamvalve->c.S2);
-	zamvalve->c.P2 = par(&zamvalve->c.I4, &zamvalve->c.E);  
+	c->S2 = ser(&c->Co, &c->Ro);
+	c->I4 = inv(&c->S2);
+	c->P2 = par(&c->I4, &c->E);  
 	
 	// 12AX7 triode model RSD-1
-	zamvalve->c.v.g = 2.242e-3;
-	zamvalve->c.v.mu = 103.2;
-	zamvalve->c.v.gamma = 1.26;
-	zamvalve->c.v.c = 3.4;
-	zamvalve->c.v.gg = 6.177e-4;
-	zamvalve->c.v.e = 1.314;
-	zamvalve->c.v.cg = 9.901;
-	zamvalve->c.v.ig0 = 8.025e-8;
+	c->v.g = 2.242e-3;
+	c->v.mu = 103.2;
+	c->v.gamma = 1.26;
+	c->v.c = 3.4;
+	c->v.gg = 6.177e-4;
+	c->v.e = 1.314;
+	c->v.cg = 9.901;
+	c->v.ig0 = 8.025e-8;
 
 	return (LV2_Handle)zamvalve;
 }

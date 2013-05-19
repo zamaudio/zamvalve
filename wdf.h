@@ -99,27 +99,6 @@ public:
 	Adaptor(int flag);
 };
 
-class inv : public Adaptor { 
-public:
-	template <class Port>inv(Port *left);
-	T waveUp();
-	void setWD(T waveparent);
-};
-
-class ser : public Adaptor {
-public:
-	template <class Port1, class Port2>ser(Port1 *left, Port2 *right);
-	T waveUp();
-	void setWD(T waveparent);	
-};
-
-class par : public Adaptor {
-public:
-	template <class Port1, class Port2>par(Port1 *left, Port2 *right);
-	T waveUp();
-	void setWD(T waveparent);
-};
-
 class R : public Adaptor {
 public:
 	R(T res);
@@ -138,6 +117,10 @@ public:
 	V(T ee, T r);
 	T waveUp();
 };
+
+#include "inv.h"
+#include "ser.h"
+#include "par.h"
 
 #else
 #endif

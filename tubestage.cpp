@@ -30,11 +30,12 @@ float tubestage(float input, Circuit* c, float tubedrive) {
 
 	float output;
 	
-	Triode *t = &c->v;
-	inv *gate = &c->I1;
-	par *cathode = &c->I3;
-	par *plate = &c->P2;
-	R *out = &c->Ro;
+	Triode *t = &(c->v);
+	inv *gate = &(c->I1);
+	par *cathode = &(c->I3);
+	par *plate = &(c->P2);
+	
+	R *out = &(c->Ro);
 
 	//Step 1: read input sample as voltage for the source
 	c->Vi.e = tubedrive*input;
