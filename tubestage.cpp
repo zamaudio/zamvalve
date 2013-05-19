@@ -17,6 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <stdlib.h>
 #include "wdf.h"
 #include "tubestage.h"
 
@@ -26,67 +27,79 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 extern "C" {
 #endif
 
-//void class_do_something(void *v) { ((Class *)v)->do_something();}
+float tubestage_run(void* circuit, float input, float tubedrive) {
+	return (((Circuit *)circuit)->tubestage(input, tubedrive));
+}
 
-float tubestage(float input, void* cct, float tubedrive) { 
+#ifdef __cplusplus
+}
+#endif
+
+Circuit::Circuit() : 
+		Vi(0.0,10000.0), Ci(0.0000001,48000.0), Ck(0.00001,48000.0), Co(0.00000001,48000.0), Ro(1000000.0), Rg(20000.0), 
+		Ri(1000000.0), Rk(1000.0), E(250.0,100000.0), 
+		S0(&Ci,&Vi), I0(&S0), P0(&I0,&Ri), S1(&Rg,&P0), 
+		I1(&S1), I3(&Ck,&Rk), S2(&Co,&Ro), I4(&S2), P2(&I4,&E) {
+	
+	// 12AX7 triode model RSD-1
+	v.g = 2.242e-3;
+	v.mu = 103.2;
+	v.gamma = 1.26;
+	v.c = 3.4;
+	v.gg = 6.177e-4;
+	v.e = 1.314;
+	v.cg = 9.901;
+	v.ig0 = 8.025e-8;
+}
+
+
+float Circuit::tubestage(float input, float tubedrive) { 
 
 	float output;
-	Circuit *c = (Circuit *) cct;
-	
-	Triode *t = &(c->v);
-	inv *gate = &(c->I1);
-	par *cathode = &(c->I3);
-	par *plate = &(c->P2);
-	
-	R *out = &(c->Ro);
 
 	//Step 1: read input sample as voltage for the source
-	c->Vi.e = tubedrive*input;
+	Vi.e = tubedrive*input;
 
 	//Step 2: propagate waves up to the triode and push values into triode element
 	//((Class*)v)->foo()
-	gate->waveUp();
-	cathode->waveUp();
-	plate->waveUp();
-	c->v.G.WD = c->I1.WU;
-	c->v.K.WD = c->I3.WU; 
-	c->v.P.WD = c->P2.WU;
-	c->v.vg = c->v.G.WD;
-	c->v.vk = c->v.K.WD;
-	c->v.vp = c->v.P.WD;
-	c->v.G.PortRes = c->I1.PortRes;
-	c->v.K.PortRes = c->I3.PortRes;
-	c->v.P.PortRes = c->P2.PortRes;
+	I1.waveUp();
+	I3.waveUp();
+	P2.waveUp();
+	v.G.WD = I1.WU;
+	v.K.WD = I3.WU; 
+	v.P.WD = P2.WU;
+	v.vg = v.G.WD;
+	v.vk = v.K.WD;
+	v.vp = v.P.WD;
+	v.G.PortRes = I1.PortRes;
+	v.K.PortRes = I3.PortRes;
+	v.P.PortRes = P2.PortRes;
 
 	//Step 3: compute wave reflections inside the triode
 	T vg0, vg1, vp0, vp1;
 
 	vg0 = -10.0;
 	vg1 = 10.0;
-	c->v.vg = t->zeroffg(vg0,vg1,TOLERANCE);
+	v.vg = v.zeroffg(vg0,vg1,TOLERANCE);
 
-	vp0 = c->e;
+	vp0 = e;
 	vp1 = 0.0;
-	c->v.vp = t->zeroffp(vp0,vp1,TOLERANCE);
+	v.vp = v.zeroffp(vp0,vp1,TOLERANCE);
 
-	c->v.vk = t->ffk();
+	v.vk = v.ffk();
 
-	c->v.G.WU = 2.0*c->v.vg-c->v.G.WD;
-	c->v.K.WU = 2.0*c->v.vk-c->v.K.WD;
-	c->v.P.WU = 2.0*c->v.vp-c->v.P.WD;
+	v.G.WU = 2.0*v.vg-v.G.WD;
+	v.K.WU = 2.0*v.vk-v.K.WD;
+	v.P.WU = 2.0*v.vp-v.P.WD;
 
 	//Step 4: output 
-	output = (float) out->Voltage()/200.0; //Rescale output voltage to be within digital limits
+	output = (float) Ro.Voltage()/200.0; //Rescale output voltage to be within digital limits
 
 	//Step 5: push new waves down from the triode element
-	plate->setWD(c->v.P.WU); 
-	gate->setWD(c->v.G.WU);
-	cathode->setWD(c->v.K.WU);
+	P2.setWD(v.P.WU); 
+	I1.setWD(v.G.WU);
+	I3.setWD(v.K.WU);
 	
 	return output;
 }
-
-#ifdef __cplusplus
-}
-#endif
 

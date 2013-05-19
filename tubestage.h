@@ -33,13 +33,16 @@ public:
 
 	//Triode element
 	Triode v;	
+	
+	float tubestage(float input, float tubedrive); 
+	Circuit();
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-float tubestage(float input, void* c, float tubedrive); 
+float tubestage_run(void* circuit, float input, float tubedrive);
 
 #ifdef __cplusplus
 }
