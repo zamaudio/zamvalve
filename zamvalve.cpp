@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 using namespace LV2;
 
-#define TOLERANCE 5e-6
+#define TOLERANCE 1e-6
 //1e-8
 
 #include "wdf.h"

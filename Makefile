@@ -4,11 +4,11 @@ PREFIX ?= /usr/local
 LIBDIR ?= lib
 LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 
-#OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
+OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
 
 LDFLAGS ?= -Wl,--as-needed -lm
-CXXFLAGS ?= $(OPTIMIZATIONS) -Wall -g
-CFLAGS ?= $(OPTIMIZATIONS) -Wall -g
+CXXFLAGS ?= $(OPTIMIZATIONS) -Wall 
+CFLAGS ?= $(OPTIMIZATIONS) -Wall 
 
 ###############################################################################
 BUNDLE = zamvalve.lv2
