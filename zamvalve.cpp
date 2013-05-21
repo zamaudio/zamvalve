@@ -180,7 +180,7 @@ public:
 			v.P.WU = 2.0*v.vp-v.P.WD;
 			
 			p(1)[i] = p(0)[i];
-			p(1)[i] = Ro.Voltage()/e; 
+			p(1)[i] = -Ro.Voltage()/e; //invert signal and rescale
 
 			P2.setWD(v.P.WU); 
 			I1.setWD(v.G.WU);
