@@ -39,10 +39,10 @@ lv2:port [
 	[
 	a lv2:ControlPort, lv2:InputPort ;
 	lv2:index 2;
-	lv2:symbol "tubedrive";
-	lv2:name "Tube Drive";
-	lv2:minimum 0.1 ;
-	lv2:maximum 30.0 ;
+	lv2:symbol "drive";
+	lv2:name "Drive";
+	lv2:minimum 0.5 ;
+	lv2:maximum 100.0 ;
 	lv2:default 1.0 ;
 	lv2:portProperty pprops:logarithmic;
 	ue:unit ue:coef;
@@ -51,10 +51,10 @@ lv2:port [
 	[
 	a lv2:ControlPort, lv2:InputPort ;
 	lv2:index 3;
-	lv2:symbol "tubetone";
-	lv2:name "Tube Tone";
+	lv2:symbol "tone";
+	lv2:name "Tone (0=Tube 1=Tape)";
 	lv2:minimum 0.0 ;
 	lv2:maximum 1.0 ;
-	lv2:default 0.0 ;
+	lv2:default 1.0 ;
 	ue:unit ue:coef;
 	].

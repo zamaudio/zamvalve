@@ -44,11 +44,10 @@ $(BUNDLE): manifest.ttl zamvalve.ttl zamvalve$(LIB_EXT)
 	mkdir $(BUNDLE)
 	cp manifest.ttl zamvalve.ttl zamvalve$(LIB_EXT) $(BUNDLE)
 
-zamvalve$(LIB_EXT): zamvalve.cpp wdf.cpp
+zamvalve$(LIB_EXT): zamvalve.cpp
 	$(CXX) -o zamvalve$(LIB_EXT) \
 		$(CXXFLAGS) \
 		zamvalve.cpp \
-		wdf.cpp \
 		$(LV2FLAGS) $(LDFLAGS)
 
 zamvalve.peg: zamvalve.ttl
