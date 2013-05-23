@@ -3,7 +3,7 @@ zamvalve
 
 ZamValve - Valve distortion plugin
 
-Faust is not required to compile this LV2 or Ladspa plugin.
+Faust is required to compile this as LV2 or Ladspa plugin.
 
   make lv2
     or
