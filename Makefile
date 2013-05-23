@@ -1,66 +1,27 @@
-#!/usr/bin/make -f
+all: lv2/zamvalve.lv2/zamvalve.ttl ladspa/zamvalve.so
 
-PREFIX ?= /usr/local
-LIBDIR ?= lib
-LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
+lv2/zamvalve.lv2/zamvalve.ttl: lv2/zamvalve.cpp
+	./compilelv2 zamvalve.dsp
 
-OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
+lv2/zamvalve.cpp:
+	./genlv2 zamvalve.dsp	
 
-LDFLAGS ?= -Wl,--as-needed -lm
-CXXFLAGS ?= $(OPTIMIZATIONS) -Wall 
-CFLAGS ?= $(OPTIMIZATIONS) -Wall 
+ladspa/zamvalve.so: ladspa/zamvalve.dsp.cpp
+	./compileladspa zamvalve.dsp
 
-###############################################################################
-BUNDLE = zamvalve.lv2
+ladspa/zamvalve.dsp.cpp:
+	./genladspa zamvalve.dsp
 
-CXXFLAGS += -fPIC -DPIC
-CFLAGS += -fPIC -DPIC
-
-UNAME=$(shell uname)
-ifeq ($(UNAME),Darwin)
-  LIB_EXT=.dylib
-  LDFLAGS += -dynamiclib
-else
-  LDFLAGS += -shared -Wl,-Bstatic -Wl,-Bdynamic
-  LIB_EXT=.so
-endif
-
-
-ifeq ($(shell pkg-config --exists lv2 lv2core lv2-plugin || echo no), no)
-  $(error "LV2 SDK was not found")
-else
-  LV2FLAGS=`pkg-config --cflags --libs lv2 lv2core lv2-plugin`
-endif
-
-ifeq ($(shell pkg-config --exists lv2-gui || echo no), no)
-  $(error "LV2-GUI is required ")
-else
-  LV2GUIFLAGS=`pkg-config --cflags --libs lv2-gui lv2 lv2core lv2-plugin`
-endif
-
-
-$(BUNDLE): manifest.ttl zamvalve.ttl zamvalve$(LIB_EXT)
-	rm -rf $(BUNDLE)
-	mkdir $(BUNDLE)
-	cp manifest.ttl zamvalve.ttl zamvalve$(LIB_EXT) $(BUNDLE)
-
-zamvalve$(LIB_EXT): zamvalve.cpp
-	$(CXX) -o zamvalve$(LIB_EXT) \
-		$(CXXFLAGS) \
-		zamvalve.cpp \
-		$(LV2FLAGS) $(LDFLAGS)
-
-zamvalve.peg: zamvalve.ttl
-	lv2peg zamvalve.ttl zamvalve.peg
-
-install: $(BUNDLE)
-	install -d $(DESTDIR)$(LV2DIR)/$(BUNDLE)
-	install -t $(DESTDIR)$(LV2DIR)/$(BUNDLE) $(BUNDLE)/*
-
+install:
+	mkdir -p /usr/local/lib/lv2
+	mkdir -p /usr/local/lib/ladspa
+	cp -a lv2/zamvalve.lv2 /usr/local/lib/lv2
+	cp -a ladspa/zamvalve.so /usr/local/lib/ladspa
+	
 uninstall:
-	rm -rf $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	rm -fr /usr/local/lib/lv2/zamvalve.lv2
+	rm -f /usr/local/lib/ladspa/zamvalve.so
 
 clean:
-	rm -rf $(BUNDLE) zamvalve$(LIB_EXT) zamvalve_gui$(LIB_EXT) zamvalve.peg
-
-.PHONY: clean install uninstall
+	rm -fr lv2/zamvalve.lv2
+	rm -f ladspa/zamvalve.so
