@@ -1,5 +1,9 @@
 all: lv2/zamvalve.lv2/zamvalve.ttl ladspa/zamvalve.so
 
+ladspa: ladspa/zamvalve.so
+
+lv2: lv2/zamvalve.lv2/zamvalve.ttl
+
 lv2/zamvalve.lv2/zamvalve.ttl: lv2/zamvalve.cpp
 	./compilelv2 zamvalve.dsp
 
