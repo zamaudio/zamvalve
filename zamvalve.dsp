@@ -1,7 +1,7 @@
 declare name "ZamValve";
 declare author "Damien Zammit";
 declare copyright "2013";
-declare version "1.00";
+declare version "2.1";
 declare license "GPLv2";
 
 db2linear(x) = pow(10.0, x/20.0);

@@ -2,10 +2,10 @@
 // name: "ZamValve"
 // author: "Damien Zammit"
 // copyright: "2013"
-// version: "1.00"
+// version: "2.1"
 // license: "GPLv2"
 //
-// Code generated with Faust 0.9.61 (http://faust.grame.fr)
+// Code generated with Faust 0.9.62 (http://faust.grame.fr)
 //-----------------------------------------------------
 /* link with  */
 /************************************************************************
@@ -94,7 +94,7 @@ class mydsp : public dsp {
 		m->declare("name", "ZamValve");
 		m->declare("author", "Damien Zammit");
 		m->declare("copyright", "2013");
-		m->declare("version", "1.00");
+		m->declare("version", "2.1");
 		m->declare("license", "GPLv2");
 	}
 
@@ -118,8 +118,8 @@ class mydsp : public dsp {
 		interface->closeBox();
 	}
 	virtual void compute (int count, FAUSTFLOAT** input, FAUSTFLOAT** output) {
-		double 	fSlow0 = pow(1e+01,(0.05 * fslider0));
-		double 	fSlow1 = fslider1;
+		double 	fSlow0 = pow(1e+01,(0.05 * double(fslider0)));
+		double 	fSlow1 = double(fslider1);
 		double 	fSlow2 = (1.0 + (0.5 * (fabs((fSlow1 - 0.5)) / fSlow0)));
 		double 	fSlow3 = (fSlow0 * (1.0 + ((((0.5 * fSlow1) - 0.25) * (fSlow1 < 0.5)) / fSlow0)));
 		double 	fSlow4 = (0.7692307692307692 / fSlow2);
@@ -191,16 +191,16 @@ class portCollector : public UI
 	const char* 			fPortNames[MAXPORT];		// table of port names to be used in a LADSPA_Descriptor
 	LADSPA_PortRangeHint 	fPortHints[MAXPORT];		// table of port hints to be used in a LADSPA_Descriptor
 
-	string					fPluginName;				// toplevel prefix used as plugin name
-	stack<string>			fPrefix;					// current prefix for controls name
+    std::string					fPluginName;				// toplevel prefix used as plugin name
+    std::stack<std::string>			fPrefix;					// current prefix for controls name
 
 
 	//--------------------------------------------------------------------------------------
-	string simplify(const string& src)
+    std::string simplify(const std::string& src)
 	{
 		int		i=0;
 		int		level=2;
-		string	dst;
+        std::string	dst;
 
 		while (src[i] ) {
 
@@ -263,7 +263,7 @@ class portCollector : public UI
 
 	void addPortDescr(int type, const char* label, int hint, float min=0.0, float max=0.0)
 	{
-		string fullname = simplify(fPrefix.top() + "-" + label);
+        std::string fullname = simplify(fPrefix.top() + "-" + label);
 		char * str = strdup(fullname.c_str());
 
 		fPortDescs[fInsCount + fOutsCount + fCtrlCount] = type;
@@ -282,7 +282,7 @@ class portCollector : public UI
 			fPrefix.push(label);
 
 		} else {
-			string s;
+            std::string s;
 			if (label && label[0]) {
 				s = fPrefix.top() + "-" + label;
 			} else {
@@ -382,15 +382,15 @@ class portCollector : public UI
 		descriptor->PortNames 			= fPortNames;
 		descriptor->PortRangeHints 		= fPortHints;
 
-		descriptor->Label = "ZamValve";
+		descriptor->Label = strdup(name);
 		descriptor->UniqueID = makeID(name);
 //		descriptor->Label = strdup(fPluginName.c_str());
-		descriptor->UniqueID = makeID(fPluginName.c_str());
+//		descriptor->UniqueID = makeID(fPluginName.c_str());
 		descriptor->Properties = LADSPA_PROPERTY_HARD_RT_CAPABLE;
 		descriptor->Name = "ZamValve";
-		descriptor->Name = strdup(fPluginName.c_str());
+//		descriptor->Name = strdup(fPluginName.c_str());
 		descriptor->Maker = "Damien Zammit";
-		descriptor->Copyright = "2013";
+		descriptor->Copyright = "GPL";
 	}
 };
 
@@ -536,10 +536,10 @@ void cleanup_method (LADSPA_Handle Instance)
 void init_descriptor(LADSPA_Descriptor* descriptor)
 {
 	descriptor->UniqueID = 123456;
-	descriptor->Label = "ZamValve";
+	descriptor->Label = "none";
 	descriptor->Properties = LADSPA_PROPERTY_HARD_RT_CAPABLE;
-	descriptor->Name = "ZamValve";
-	descriptor->Maker = "Damien Zammit";
+	descriptor->Name = "none";
+	descriptor->Maker = "Yann Orlarey";
 	descriptor->Copyright = "GPL";
 
 	descriptor->ImplementationData = 0;
