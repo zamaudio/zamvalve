@@ -3,10 +3,6 @@ zamvalve
 
 ZamValve - Valve distortion plugin
 
-Faust is required to compile this as LV2 or Ladspa plugin.
+Faust >=0.9.62 and LADSPA SDK is required to compile this LADSPA plugin.
 
-  make lv2
-    or
-  make ladspa
-
-  sudo make install
+  make && sudo make install
