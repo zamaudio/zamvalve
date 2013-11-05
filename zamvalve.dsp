@@ -4,10 +4,13 @@ declare copyright "2013";
 declare version "2.1";
 declare license "GPLv2";
 
-db2linear(x) = pow(10.0, x/20.0);
+import("math.lib");
+import("filter.lib");
 
-tone = hslider("Tube/Tape blend", 0.0, 0.0, 1.0, 0.1);
-drive = hslider("Drive (dB)", 0.0, 0.0, 35.0, 0.1) : db2linear;
+//db2linear(x) = pow(10.0, x/20.0);
+
+tone = hslider("Tube/Tape blend", 0.0, 0.0, 1.0, 0.1) : smooth(0.99);
+drive = hslider("Drive (dB)", 0.0, 0.0, 35.0, 0.1) : smooth(0.99) : db2linear;
 
 saturate(x, D, T) = (exp(x1)-exp(x2))/(exp(x3)+exp(-x3))/((1.0 + shape2)*1.3)
 	with {

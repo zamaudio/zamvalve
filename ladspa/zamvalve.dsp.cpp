@@ -88,7 +88,9 @@ typedef long double quad;
 class mydsp : public dsp {
   private:
 	FAUSTFLOAT 	fslider0;
+	double 	fRec0[2];
 	FAUSTFLOAT 	fslider1;
+	double 	fRec1[2];
   public:
 	static void metadata(Meta* m) 	{ 
 		m->declare("name", "ZamValve");
@@ -96,6 +98,22 @@ class mydsp : public dsp {
 		m->declare("copyright", "2013");
 		m->declare("version", "2.1");
 		m->declare("license", "GPLv2");
+		m->declare("math.lib/name", "Math Library");
+		m->declare("math.lib/author", "GRAME");
+		m->declare("math.lib/copyright", "GRAME");
+		m->declare("math.lib/version", "1.0");
+		m->declare("math.lib/license", "LGPL with exception");
+		m->declare("filter.lib/name", "Faust Filter Library");
+		m->declare("filter.lib/author", "Julius O. Smith (jos at ccrma.stanford.edu)");
+		m->declare("filter.lib/copyright", "Julius O. Smith III");
+		m->declare("filter.lib/version", "1.29");
+		m->declare("filter.lib/license", "STK-4.3");
+		m->declare("filter.lib/reference", "https://ccrma.stanford.edu/~jos/filters/");
+		m->declare("music.lib/name", "Music Library");
+		m->declare("music.lib/author", "GRAME");
+		m->declare("music.lib/copyright", "GRAME");
+		m->declare("music.lib/version", "1.0");
+		m->declare("music.lib/license", "LGPL with exception");
 	}
 
 	virtual int getNumInputs() 	{ return 1; }
@@ -105,7 +123,9 @@ class mydsp : public dsp {
 	virtual void instanceInit(int samplingFreq) {
 		fSamplingFreq = samplingFreq;
 		fslider0 = 0.0;
+		for (int i=0; i<2; i++) fRec0[i] = 0;
 		fslider1 = 0.0;
+		for (int i=0; i<2; i++) fRec1[i] = 0;
 	}
 	virtual void init(int samplingFreq) {
 		classInit(samplingFreq);
@@ -118,18 +138,21 @@ class mydsp : public dsp {
 		interface->closeBox();
 	}
 	virtual void compute (int count, FAUSTFLOAT** input, FAUSTFLOAT** output) {
-		double 	fSlow0 = pow(1e+01,(0.05 * double(fslider0)));
-		double 	fSlow1 = double(fslider1);
-		double 	fSlow2 = (1.0 + (0.5 * (fabs((fSlow1 - 0.5)) / fSlow0)));
-		double 	fSlow3 = (fSlow0 * (1.0 + ((((0.5 * fSlow1) - 0.25) * (fSlow1 < 0.5)) / fSlow0)));
-		double 	fSlow4 = (0.7692307692307692 / fSlow2);
+		double 	fSlow0 = (0.010000000000000009 * double(fslider0));
+		double 	fSlow1 = (0.010000000000000009 * double(fslider1));
 		FAUSTFLOAT* input0 = input[0];
 		FAUSTFLOAT* output0 = output[0];
 		for (int i=0; i<count; i++) {
-			double fTemp0 = (double)input0[i];
-			double fTemp1 = (fSlow0 * fTemp0);
+			fRec0[0] = (fSlow0 + (0.99 * fRec0[1]));
+			double fTemp0 = pow(10,(0.05 * fRec0[0]));
+			double fTemp1 = ((double)input0[i] * fTemp0);
 			double fTemp2 = (0 - fTemp1);
-			output0[i] = (FAUSTFLOAT)(fSlow4 * ((exp((fSlow3 * fTemp0)) - exp((fSlow2 * fTemp2))) / (exp(fTemp2) + exp(fTemp1))));
+			fRec1[0] = (fSlow1 + (0.99 * fRec1[1]));
+			double fTemp3 = (1.0 + (0.5 * (fabs((fRec1[0] - 0.5)) / fTemp0)));
+			output0[i] = (FAUSTFLOAT)(0.7692307692307692 * ((exp((fTemp1 * (1.0 + (((fRec1[0] < 0.5) * ((0.5 * fRec1[0]) - 0.25)) / fTemp0)))) - exp((fTemp3 * fTemp2))) / (fTemp3 * (exp(fTemp2) + exp(fTemp1)))));
+			// post processing
+			fRec1[1] = fRec1[0];
+			fRec0[1] = fRec0[0];
 		}
 	}
 };
