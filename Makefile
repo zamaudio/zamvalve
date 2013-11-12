@@ -3,7 +3,7 @@ PREFIX=/usr
 all: zamvalve-tanh.so
 
 zamvalve-tanh.so: zamvalve-tanh.dsp.cpp
-	g++ -O3 -march=native -mfpmath=sse -msse -msse2 -ffast-math -fPIC -shared -Dmydsp=zamvalve_tanh -I/usr/lib zamvalve-tanh.dsp.cpp -o zamvalve-tanh.so
+	g++ -O3 -mfpmath=sse -msse -msse2 -ffast-math -fPIC -shared -Dmydsp=zamvalve_tanh -I/usr/lib zamvalve-tanh.dsp.cpp -o zamvalve-tanh.so
 
 install:
 	mkdir -p $(PREFIX)/lib/ladspa
