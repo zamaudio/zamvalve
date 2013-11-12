@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PREFIX ?= /usr/local
+PREFIX ?= /usr
 LIBDIR ?= lib
 LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 
