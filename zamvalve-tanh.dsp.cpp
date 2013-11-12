@@ -1,5 +1,5 @@
 //-----------------------------------------------------
-// name: "ZamValve"
+// name: "ZamValveTanh"
 // author: "Damien Zammit"
 // copyright: "2013"
 // version: "2.1"
@@ -93,7 +93,7 @@ class mydsp : public dsp {
 	double 	fRec1[2];
   public:
 	static void metadata(Meta* m) 	{ 
-		m->declare("name", "ZamValve");
+		m->declare("name", "ZamValveTanh");
 		m->declare("author", "Damien Zammit");
 		m->declare("copyright", "2013");
 		m->declare("version", "2.1");
@@ -132,7 +132,7 @@ class mydsp : public dsp {
 		instanceInit(samplingFreq);
 	}
 	virtual void buildUserInterface(UI* interface) {
-		interface->openVerticalBox("ZamValve");
+		interface->openVerticalBox("ZamValveTanh");
 		interface->addHorizontalSlider("Drive (dB)", &fslider0, 0.0, 0.0, 35.0, 0.1);
 		interface->addHorizontalSlider("Tube/Tape blend", &fslider1, 0.0, 0.0, 1.0, 0.1);
 		interface->closeBox();
@@ -410,7 +410,7 @@ class portCollector : public UI
 //		descriptor->Label = strdup(fPluginName.c_str());
 //		descriptor->UniqueID = makeID(fPluginName.c_str());
 		descriptor->Properties = LADSPA_PROPERTY_HARD_RT_CAPABLE;
-		descriptor->Name = "ZamValve";
+		descriptor->Name = "ZamValveTanh";
 //		descriptor->Name = strdup(fPluginName.c_str());
 		descriptor->Maker = "Damien Zammit";
 		descriptor->Copyright = "GPL";

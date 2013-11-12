@@ -1,17 +1,16 @@
-all: ladspa/zamvalve.so
+PREFIX=/usr
 
-ladspa/zamvalve.so: ladspa/zamvalve.dsp.cpp
-	./compileladspa zamvalve.dsp
+all: zamvalve-tanh.so
 
-ladspa/zamvalve.dsp.cpp:
-	./genladspa zamvalve.dsp
+zamvalve-tanh.so: zamvalve-tanh.dsp.cpp
+	g++ -O3 -march=native -mfpmath=sse -msse -msse2 -ffast-math -fPIC -shared -Dmydsp=zamvalve_tanh -I/usr/lib zamvalve-tanh.dsp.cpp -o zamvalve-tanh.so
 
 install:
-	mkdir -p /usr/local/lib/ladspa
-	cp -a ladspa/zamvalve.so /usr/local/lib/ladspa
+	mkdir -p $(PREFIX)/lib/ladspa
+	cp zamvalve-tanh.so $(PREFIX)/lib/ladspa
 	
 uninstall:
-	rm -f /usr/local/lib/ladspa/zamvalve.so
+	rm -f $(PREFIX)/lib/ladspa/zamvalve-tanh.so
 
 clean:
-	rm -f ladspa/zamvalve.so
+	rm -f zamvalve-tanh.so

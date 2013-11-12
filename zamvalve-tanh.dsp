@@ -1,4 +1,4 @@
-declare name "ZamValve";
+declare name "ZamValveTanh";
 declare author "Damien Zammit";
 declare copyright "2013";
 declare version "2.1";
