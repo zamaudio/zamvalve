@@ -1,4 +1,4 @@
-PREFIX=/usr
+PREFIX=/usr/local
 
 all: zamvalve-tanh.so
 
