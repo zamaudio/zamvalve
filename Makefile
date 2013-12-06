@@ -1,11 +1,12 @@
 PREFIX ?= /usr/local
 LIBDIR ?= lib
+FAUSTROOT ?= /usr/lib
 OPTIMIZATIONS ?= -O3 -ffast-math
 
 all: zamvalve-tanh.so
 
 zamvalve-tanh.so: zamvalve-tanh.dsp.cpp
-	$(CXX) $(OPTFLAGS) -fPIC -shared -Dmydsp=zamvalve_tanh -I/usr/lib zamvalve-tanh.dsp.cpp -o zamvalve-tanh.so
+	$(CXX) $(OPTFLAGS) -fPIC -shared -Dmydsp=zamvalve_tanh -I$(FAUSTROOT) zamvalve-tanh.dsp.cpp -o zamvalve-tanh.so
 
 install:
 	install -d $(DESTDIR)$(PREFIX)/$(LIBDIR)/ladspa
