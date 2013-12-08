@@ -27,10 +27,10 @@ else
 endif
 
 
-ifeq ($(shell pkg-config --exists lv2 lv2-plugin || echo no), no)
+ifeq ($(shell pkg-config --exists lv2|| echo no), no)
   $(error "LV2 SDK was not found")
 else
-  LV2FLAGS=`pkg-config --cflags --libs lv2 lv2-plugin`
+  LV2FLAGS=`pkg-config --cflags --libs lv2`
 endif
 
 $(BUNDLE): manifest.ttl zamvalve.ttl zamvalve$(LIB_EXT)
