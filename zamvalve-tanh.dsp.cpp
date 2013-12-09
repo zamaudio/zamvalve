@@ -3,7 +3,7 @@
 // author: "Damien Zammit"
 // copyright: "2013"
 // version: "2.1"
-// license: "GPLv2"
+// license: "GPLv2+"
 //
 // Code generated with Faust 0.9.62 (http://faust.grame.fr)
 //-----------------------------------------------------
@@ -97,7 +97,7 @@ class mydsp : public dsp {
 		m->declare("author", "Damien Zammit");
 		m->declare("copyright", "2013");
 		m->declare("version", "2.1");
-		m->declare("license", "GPLv2");
+		m->declare("license", "GPLv2+");
 		m->declare("math.lib/name", "Math Library");
 		m->declare("math.lib/author", "GRAME");
 		m->declare("math.lib/copyright", "GRAME");
@@ -413,7 +413,7 @@ class portCollector : public UI
 		descriptor->Name = "ZamValveTanh";
 //		descriptor->Name = strdup(fPluginName.c_str());
 		descriptor->Maker = "Damien Zammit";
-		descriptor->Copyright = "GPL";
+		descriptor->Copyright = "GPLv2+";
 	}
 };
 
